@@ -1059,10 +1059,18 @@
             padding: 0 10px 5px;
             display: flex;
             align-items: center;
-            background: transparent;
-            backdrop-filter: none;
-            gap: 5px;
-        }
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            gap: 2px; /* 修改：将间距从 5px 缩小到 2px */
+            overflow-x: auto; /* 新增：允许内容超出时横向滚动 */
+            flex-wrap: nowrap; /* 新增：确保所有按钮在同一行，不换行 */
+}
+
+/* (可选) 新增：为了在某些浏览器上获得更好的视觉效果，可以隐藏滚动条 */
+#sticker-bar::-webkit-scrollbar {
+    display: none; /* 隐藏滚动条本身 */
+}
+
 
         .sticker-bar-btn {
             background: none;
@@ -1202,8 +1210,8 @@
             padding: 10px;
             padding-bottom: calc(10px + env(safe-area-inset-bottom));
             border-top: 1px solid #eee;
-            background: transparent;
-            backdrop-filter: none;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
             flex-shrink: 0;
             gap: 10px;
             border-bottom-left-radius: var(--phone-corner-radius);
