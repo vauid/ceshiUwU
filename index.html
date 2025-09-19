@@ -258,7 +258,7 @@
             gap: 20px;
             justify-content: center;
             align-content: center;
-            margin-top: 40px;
+            margin-top: 140px;
         }
 
         #peek-screen .time-widget,
@@ -5810,16 +5810,17 @@
             await saveData();
         }
 
-        function setupCustomizeApp() {
+                function setupCustomizeApp() {
             customizeForm.addEventListener('input', async (e) => {
                 const target = e.target;
 
                 // --- 处理应用图标的逻辑 ---
-                if (target.dataset.type === 'appIcon') {
-                    const iconId = target.dataset.id;
+                if (target.dataset.iconId) { // 修改这里，统一使用一个标识
+                    const iconId = target.dataset.iconId;
                     const newUrl = target.value.trim();
                     const previewImg = document.getElementById(`icon-preview-${iconId}`);
                     if (newUrl) {
+                        if (!db.customIcons) db.customIcons = {}; // 确保 customIcons 已初始化
                         db.customIcons[iconId] = newUrl;
                         if(previewImg) previewImg.src = newUrl;
                     }
@@ -5831,15 +5832,8 @@
 
                     if (prop) { // 这是小椭圆 (有prop属性)
                         db.homeWidgetSettings[part][prop] = newValue;
-                        // 实时更新预览图或文本
-                        if (prop === 'imageUrl') {
-                            const preview = document.getElementById(`widget-preview-${part}-img`);
-                            if(preview) preview.src = newValue;
-                        }
                     } else { // 这是中央大圆 (没有prop属性)
                         db.homeWidgetSettings[part] = newValue;
-                        const preview = document.getElementById('widget-preview-central');
-                        if(preview) preview.src = newValue;
                     }
                 }
 
@@ -5850,7 +5844,9 @@
                 // --- 处理重置应用图标的逻辑 ---
                 if (e.target.matches('.reset-icon-btn')) {
                     const iconId = e.target.dataset.id;
-                    delete db.customIcons[iconId];
+                    if (db.customIcons) {
+                        delete db.customIcons[iconId];
+                    }
                     await saveData();
                     renderCustomizeForm(); // 重新渲染自定义页
                     setupHomeScreen(); // 刷新主页
@@ -5872,20 +5868,83 @@
 
         function renderCustomizeForm() {
             customizeForm.innerHTML = '';
-            Object.entries(defaultIcons).forEach(([id, {name, url}]) => {
-                const currentIcon = db.customIcons[id] || url;
+
+            // --- 应用图标自定义部分 (稍微调整) ---
+             Object.entries(defaultIcons).forEach(([id, {name, url}]) => {
+                if (!id.includes('screen')) return; // 只显示应用的图标
+                const currentIcon = (db.customIcons && db.customIcons[id]) || url;
                 const itemHTML = `
                 <div class="icon-custom-item">
                     <img src="${currentIcon}" alt="${name}" class="icon-preview" id="icon-preview-${id}">
                     <div class="icon-details">
                         <p>${name || '模式切换'}</p>
-                        <input type="url" class="form-group" placeholder="粘贴新的图标URL" value="${db.customIcons[id] || ''}" data-id="${id}">
+                        <input type="url" class="form-group" placeholder="粘贴新的图标URL" value="${(db.customIcons && db.customIcons[id]) || ''}" data-icon-id="${id}">
                     </div>
                     <button type="button" class="reset-icon-btn" data-id="${id}">重置</button>
                 </div>`;
                 customizeForm.insertAdjacentHTML('beforeend', itemHTML);
             });
 
+            // --- 主页小部件自定义部分 (这是新增的) ---
+            const widgetSettings = db.homeWidgetSettings || defaultWidgetSettings;
+            const widgetSectionHTML = `
+                <hr style="border:none; border-top:1px solid #eee; margin: 30px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h4 style="margin: 0; color: var(--primary-color);">主页小部件设置</h4>
+                    <button type="button" id="reset-widget-btn" class="btn btn-neutral btn-small">恢复默认</button>
+                </div>
+
+                <div class="form-group">
+                    <label>中央大圆图片URL</label>
+                    <input type="url" class="form-group" placeholder="粘贴图片URL" value="${widgetSettings.centralCircleImage}" data-widget-part="centralCircleImage">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div>
+                        <div class="form-group">
+                            <label>左上角文字</label>
+                            <input type="text" class="form-group" value="${widgetSettings.topLeft.text}" data-widget-part="topLeft" data-widget-prop="text">
+                        </div>
+                        <div class="form-group">
+                            <label>左上角图片URL</label>
+                            <input type="url" class="form-group" value="${widgetSettings.topLeft.imageUrl}" data-widget-part="topLeft" data-widget-prop="imageUrl">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label>右上角文字</label>
+                            <input type="text" class="form-group" value="${widgetSettings.topRight.text}" data-widget-part="topRight" data-widget-prop="text">
+                        </div>
+                        <div class="form-group">
+                            <label>右上角图片URL</label>
+                            <input type="url" class="form-group" value="${widgetSettings.topRight.imageUrl}" data-widget-part="topRight" data-widget-prop="imageUrl">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label>左下角文字</label>
+                            <input type="text" class="form-group" value="${widgetSettings.bottomLeft.text}" data-widget-part="bottomLeft" data-widget-prop="text">
+                        </div>
+                        <div class="form-group">
+                            <label>左下角图片URL</label>
+                            <input type="url" class="form-group" value="${widgetSettings.bottomLeft.imageUrl}" data-widget-part="bottomLeft" data-widget-prop="imageUrl">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="form-group">
+                            <label>右下角文字</label>
+                            <input type="text" class="form-group" value="${widgetSettings.bottomRight.text}" data-widget-part="bottomRight" data-widget-prop="text">
+                        </div>
+                         <div class="form-group">
+                            <label>右下角图片URL</label>
+                            <input type="url" class="form-group" value="${widgetSettings.bottomRight.imageUrl}" data-widget-part="bottomRight" data-widget-prop="imageUrl">
+                        </div>
+                    </div>
+                </div>
+            `;
+            customizeForm.insertAdjacentHTML('beforeend', widgetSectionHTML);
+
+            // --- 全局CSS部分 ---
             const globalCssSectionHTML = `
                 <hr style="border:none; border-top:1px solid #eee; margin: 20px 0;">
                 <div class="form-group">
@@ -5953,6 +6012,7 @@
                     if (!css) return showToast('CSS内容为空，无法保存');
                     const name = prompt('请输入预设名称（同名将覆盖）:');
                     if (!name) return;
+                    if (!db.globalCssPresets) db.globalCssPresets = [];
                     const existingIndex = db.globalCssPresets.findIndex(p => p.name === name);
                     if (existingIndex > -1) {
                         db.globalCssPresets[existingIndex].css = css;
