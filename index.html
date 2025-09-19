@@ -245,6 +245,7 @@
         #home-screen.day-mode .widget-time,
         #home-screen.day-mode .widget-date,
         #home-screen.day-mode .widget-battery,
+        #home-screen.day-mode .widget-signature,
         #home-screen.day-mode .app-icon .app-name {
             color: var(--white-color);
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -258,7 +259,7 @@
             gap: 20px;
             justify-content: center;
             align-content: center;
-            margin-top: 40px;
+            margin-top: 50px;
         }
 
         #peek-screen .time-widget,
@@ -1831,6 +1832,50 @@
     /* 时间的字体大小 */
     font-size: 25px;
     font-weight: 600; /* 字体粗细 */
+}
+
+.widget-signature {
+    color: var(--text-color);
+    font-family: var(--font-family);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -50px; /* Position it below the time widget */
+    font-size: 14px;
+    font-weight: 500;
+    width: 90%;
+    max-width: 300px;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    text-align: center;
+    padding: 5px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.widget-signature:focus {
+    background-color: rgba(0, 0, 0, 0.05);
+    white-space: normal;
+    overflow: visible;
+}
+
+.widget-signature:empty::before {
+    content: attr(placeholder);
+    color: #999;
+    pointer-events: none;
+}
+
+#home-screen.day-mode .widget-signature:focus {
+     background-color: rgba(255, 255, 255, 0.1);
+}
+
+#home-screen.day-mode .widget-signature:empty::before {
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .widget-date {
@@ -3461,6 +3506,7 @@
             },
             globalCss: '',
             globalCssPresets: [],
+            homeSignature: '编辑个性签名...',
         };
         let currentChatId = null, currentChatType = null, isGenerating = false, longPressTimer = null,
             isInMultiSelectMode = false, editingMessageId = null, currentPage = 1, currentTransferMessageId = null,
@@ -5656,6 +5702,7 @@
 
 
                         <div class="widget-time" id="time-display"></div>
+                        <div contenteditable="true" class="widget-signature" id="widget-signature" placeholder="编辑个性签名..."></div>
                         <div class="widget-date" id="date-display"></div>
                         <div class="widget-battery">
                             <svg width="32" height="23" viewBox="0 0 24 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -5708,6 +5755,19 @@
             document.querySelector('[data-target="tutorial-screen"]').addEventListener('click', renderTutorialContent);
             updateBatteryStatus();
 
+            const signatureWidget = document.getElementById('widget-signature');
+            if (signatureWidget) {
+                signatureWidget.textContent = db.homeSignature || '';
+                signatureWidget.addEventListener('blur', async (e) => {
+                    const newSignature = e.target.textContent.trim();
+                    if (db.homeSignature !== newSignature) {
+                        db.homeSignature = newSignature;
+                        await saveData();
+                        showToast('签名已保存');
+                    }
+                });
+            }
+
             // --- Home Screen Swipe Logic ---
             const swiper = homeScreen.querySelector('.home-screen-swiper');
             let touchStartX = 0;
@@ -5723,7 +5783,7 @@
 
             // --- Touch Events ---
             homeScreen.addEventListener('touchstart', (e) => {
-                if (e.target.closest('a')) return;
+                if (e.target.closest('a') || e.target.closest('#widget-signature')) return;
                 isDragging = true;
                 touchStartX = e.changedTouches[0].screenX;
                 touchEndX = e.changedTouches[0].screenX; // Reset on start
@@ -5742,7 +5802,7 @@
 
             // --- Mouse Events ---
             homeScreen.addEventListener('mousedown', (e) => {
-                if (e.target.closest('a')) return;
+                if (e.target.closest('a') || e.target.closest('#widget-signature')) return;
                 e.preventDefault();
                 isDragging = true;
                 touchStartX = e.screenX;
@@ -9203,6 +9263,7 @@
                     myPersonaPresets: data.myPersonaPresets || [],
                     globalCss: data.globalCss || '',
                     globalCssPresets: data.globalCssPresets || [],
+                    homeSignature: data.homeSignature || '编辑个性签名...',
                     homeWidgetSettings: data.homeWidgetSettings || JSON.parse(JSON.stringify(defaultWidgetSettings))
                 };
 
