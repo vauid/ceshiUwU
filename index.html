@@ -7323,15 +7323,21 @@ if (newTextRaw) {
     }
 
     const oldContent = chat.history[messageIndex].content;
-    const prefixMatch = oldContent.match(/(\[.*?发送消息：)[\s\S]+\]/);
-    const prefix = prefixMatch ? prefixMatch[1] : '';
-    const newContent = `${prefix}${newText}]`;
-    chat.history[messageIndex].content = newContent;
-// ...
+    const prefixMatch = oldContent.match(/(\[.*?的消息：)[\s\S]+\]/);
+    let newContent;
 
-                if (chat.history[messageIndex].parts) {
-                    chat.history[messageIndex].parts = [{type: 'text', text: newContent}];
-                }
+    if (prefixMatch && prefixMatch[1]) {
+        const prefix = prefixMatch[1];
+        newContent = `${prefix}${newText}]`;
+    } else {
+        newContent = newTextRaw;
+    }
+
+    chat.history[messageIndex].content = newContent;
+
+    if (chat.history[messageIndex].parts) {
+        chat.history[messageIndex].parts = [{type: 'text', text: newContent}];
+    }
                 await saveData();
                 currentPage = 1;
                 renderMessages(false, true);
@@ -7834,7 +7840,7 @@ if (renameRegex.test(text)) {
     if (db.apiSettings && db.apiSettings.timePerceptionEnabled) {
         userText += `[发送时间: ${getFormattedTimestamp(new Date())}]`;
     }
-    messageContent = `[${myName}发消息：${userText}]`;
+    messageContent = `[${myName}的消息：${userText}]`;
 }
 
 const message = {
