@@ -269,8 +269,27 @@
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
         }
 
+        #peek-screen .time-widget {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        #peek-screen .time-widget .time {
+            font-size: 72px;
+            font-weight: 200;
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        #peek-screen .time-widget .date {
+            font-size: 18px;
+            font-weight: 400;
+            opacity: 0.8;
+            margin-top: 8px;
+        }
+
         #peek-screen .app-grid {
-            margin-top: 210px;
+            margin-top: 20px;
         }
 
         .dock {
@@ -314,6 +333,7 @@
             color: var(--text-color);
             font-weight: 500;
         }
+
 
         .content {
             flex-grow: 1;
@@ -3011,7 +3031,6 @@
     border: 1px solid rgba(255, 192, 203, 0.3); /* 和输入框一样的淡粉色边框 */
     transition: all 0.2s ease;
     cursor: pointer;
-}
 
 /* 图标颜色 */
 .forum-search-bar .action-btn svg {
@@ -5188,7 +5207,12 @@ return Promise.resolve();
                 const navLink = e.target.closest('.app-icon[data-target]');
                 if (navLink) {
                     e.preventDefault();
-                    switchScreen(navLink.getAttribute('data-target'));
+                    const target = navLink.getAttribute('data-target');
+                    if (target === 'music-screen') {
+                        showToast('该应用正在开发中，敬请期待！');
+                        return;
+                    }
+                    switchScreen(target);
                 }
             });
 
