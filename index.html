@@ -7,7 +7,7 @@
     <title>章鱼喷墨机</title>
     <meta name="theme-color" content="#FFFFFF"/>
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="apple-touch-icon" href="https://i.postimg.cc/ydsCm8Vr/chan-43.png">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/nzP9sgxr/chan-125.png">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <link rel="manifest" href="manifest.json">
@@ -4166,7 +4166,9 @@
             'day-mode-btn': {name: '白昼模式', url: 'https://i.postimg.cc/Jz0tYqnT/chan-145.png'},
             'night-mode-btn': {name: '夜间模式', url: 'https://i.postimg.cc/htYvkdQK/chan-146.png'},
             'forum-screen': {name: '论坛', url: 'https://i.postimg.cc/fyPVBZf1/1758451183605.png'},
-'music-screen': {name: '音乐', url: 'https://i.postimg.cc/ydd65txK/1758451018266.png'} // <-- 这里是新增的音乐图标定义
+'music-screen': {name: '音乐', url: 'https://i.postimg.cc/ydd65txK/1758451018266.png'},
+'diary-screen': {name: '日记本', url: 'https://i.postimg.cc/bJBLzmFH/chan-70.png'},
+'piggy-bank-screen': {name: '存钱罐', url: 'https://i.postimg.cc/3RmWRRtS/chan-18.png'}
         };
 
 
@@ -5208,7 +5210,7 @@ return Promise.resolve();
                 if (navLink) {
                     e.preventDefault();
                     const target = navLink.getAttribute('data-target');
-                    if (target === 'music-screen') {
+                    if (target === 'music-screen' || target === 'diary-screen' || target === 'piggy-bank-screen') {
                         showToast('该应用正在开发中，敬请期待！');
                         return;
                     }
@@ -6460,6 +6462,14 @@ return Promise.resolve();
     <img src="${getIcon('music-screen')}" alt="音乐" class="icon-img">
     <span class="app-name">${defaultIcons['music-screen'].name}</span>
 </a>
+                        <a href="#" class="app-icon" data-target="diary-screen">
+                            <img src="${getIcon('diary-screen')}" alt="日记本" class="icon-img">
+                            <span class="app-name">${defaultIcons['diary-screen'].name}</span>
+                        </a>
+                        <a href="#" class="app-icon" data-target="piggy-bank-screen">
+                            <img src="${getIcon('piggy-bank-screen')}" alt="存钱罐" class="icon-img">
+                            <span class="app-name">${defaultIcons['piggy-bank-screen'].name}</span>
+                        </a>
                      </div>
                 </div>
 
@@ -6668,7 +6678,7 @@ return Promise.resolve();
             const iconOrder = [
                 'chat-list-screen', 'api-settings-screen', 'wallpaper-screen',
                 'world-book-screen', 'customize-screen', 'tutorial-screen',
-                'font-settings-screen', 'day-mode-btn', 'night-mode-btn', 'forum-screen','music-screen' 
+                'font-settings-screen', 'day-mode-btn', 'night-mode-btn', 'forum-screen', 'music-screen', 'diary-screen', 'piggy-bank-screen'
             ];
 
             let iconsContentHTML = '';
@@ -7468,7 +7478,7 @@ if (newTextRaw) {
             const timeSkipMatch = content.match(timeSkipRegex);
             const inviteMatch = content.match(inviteRegex);
             const renameMatch = content.match(renameRegex);
-            const invisibleRegex = /\[.*?(?:接收|退回).*?的转账\]|\[.*?更新状态为：.*?\]|\[.*?已接收礼物\]|\[system:.*?\]/;
+            const invisibleRegex = /\[.*?(?:接收|退回).*?的转账\]|\[.*?更新状态为：.*?\]|\[.*?已接收礼物\]|\[system:.*?\]|\[系统情景通知：.*?\]/;
             if (invisibleRegex.test(content)) {
                 return null;
             }
@@ -11127,5 +11137,3 @@ function renderForumPosts(posts) {
 </body>
 
 </html>
-
-
