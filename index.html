@@ -1972,6 +1972,88 @@
             display: block;
         }
 
+    /* --- Peek Album Styles (偷看相册样式) --- */
+    .album-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2px;
+        padding: 2px;
+    }
+
+    .album-photo {
+        position: relative;
+        width: 100%;
+        padding-bottom: 100%; /* 1:1 Aspect Ratio */
+        background-color: #e9ecef;
+        cursor: pointer;
+    }
+
+    .album-photo img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .video-indicator {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .video-indicator svg {
+        width: 14px;
+        height: 14px;
+        fill: white;
+        margin-left: 2px;
+    }
+
+    #peek-photo-modal .modal-window {
+        width: 90%;
+        max-width: 420px; /* 确保弹窗不会超过手机屏幕宽度 */
+        padding: 15px;
+        background-color: #fff;
+        border-radius: 15px;
+    }
+
+    #peek-photo-image-container {
+        width: 100%;
+        max-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+        background-color: #f0f0f0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    #peek-photo-image-container img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    #peek-photo-description {
+        font-size: 15px;
+        line-height: 1.6;
+        color: #333;
+        text-align: left;
+        white-space: pre-wrap;
+        padding: 0 5px 5px 5px;
+        border-top: 1px solid #eee;
+        margin-top: 15px;
+        padding-top: 15px;
+    }
         /* Peek Screen Specific Styles */
         #peek-messages-screen .list-item:hover,
         #peek-conversation-screen {
@@ -3100,8 +3182,8 @@
 }
 /* --- 新增样式结束 --- */
 .message-time { display: none; }
-
-
+ 
+ 
     </style>
     <style id="global-css-style"></style>
 </head>
@@ -3832,6 +3914,19 @@
     <!-- Peek Drafts Screen -->
     <div id="peek-drafts-screen" class="screen"></div>
 
+    <div id="peek-album-screen" class="screen">
+        <header class="app-header">
+            <button class="back-btn" data-target="peek-screen">‹</button>
+            <div class="title-container"><h1 class="title">相册</h1></div>
+            <button class="action-btn" id="refresh-album-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"></path></svg></button>
+        </header>
+        <main class="content">
+            <div class="album-grid">
+                <p class="placeholder-text">正在生成相册内容...</p>
+            </div>
+        </main>
+    </div>
+ 
     <div id="peek-confirm-modal" class="modal-overlay">
         <div class="modal-window">
             <h3>要偷看ta的手机吗？</h3>
@@ -3853,8 +3948,16 @@
             </form>
         </div>
     </div>
+    <div id="peek-photo-modal" class="modal-overlay">
+        <div class="modal-window">
+            <div id="peek-photo-image-container">
+                <span class="placeholder-icon">🖼️</span>
+            </div>
+            <div id="peek-photo-description"></div>
+        </div>
+    </div>
 </div>
-
+ 
     <div id="forum-binding-modal" class="modal-overlay">
         <div class="modal-window">
             <h3>绑定上下文</h3>
@@ -4196,7 +4299,10 @@
             'cart': { name: '购物车', url: 'https://i.postimg.cc/pLwT6VTh/export202509181830143960.png' },
             'transfer': { name: '中转站', url: 'https://i.postimg.cc/63wQBHCB/export202509181831140230.png' },
             'browser': { name: '浏览器', url: 'https://i.postimg.cc/SKcsF02Z/export202509181830445980.png' },
-            'drafts': { name: '草稿箱', url: 'https://i.postimg.cc/ZKqC9D2R/export202509181827225860.png' }
+            'drafts': { name: '草稿箱', url: 'https://i.postimg.cc/ZKqC9D2R/export202509181827225860.png' },
+            'album': { name: '相册', url: 'https://i.postimg.cc/qBcdpqNc/export202509221549335970.png' },
+            'steps': { name: '步数', url: 'https://i.postimg.cc/5NndFrq6/export202509181824532800.png' },
+            'unlock': { name: 'unlock！', url: 'https://i.postimg.cc/28zNyYWs/export202509221542593320.png' }
         };
 
         const simulatedMemos = [];
@@ -5492,6 +5598,22 @@ return Promise.resolve();
 
                 container.appendChild(card);
             });
+
+            // 为相册刷新按钮添加事件监听
+            const refreshAlbumBtn = document.getElementById('refresh-album-btn');
+            if(refreshAlbumBtn) {
+                refreshAlbumBtn.addEventListener('click', () => generateAndRenderPeekContent('album', { forceRefresh: true }));
+            }
+    
+            // 为照片详情模态框添加关闭事件
+            const photoModal = document.getElementById('peek-photo-modal');
+            if(photoModal) {
+                photoModal.addEventListener('click', (e) => {
+                    if (e.target === photoModal) {
+                        photoModal.classList.remove('visible');
+                    }
+                });
+            }
         }
 
         async function generateJournal(start, end) {
@@ -5674,8 +5796,69 @@ return Promise.resolve();
                 // Refreshing a conversation should re-fetch the whole message list
                 generateAndRenderPeekContent('messages', { forceRefresh: true });
             });
+
+            // 为相册刷新按钮添加事件监听
+            const refreshAlbumBtn = document.getElementById('refresh-album-btn');
+            if(refreshAlbumBtn) {
+                refreshAlbumBtn.addEventListener('click', () => generateAndRenderPeekContent('album', { forceRefresh: true }));
+            }
+    
+            // 为照片详情模态框添加关闭事件
+            const photoModal = document.getElementById('peek-photo-modal');
+            if(photoModal) {
+                photoModal.addEventListener('click', (e) => {
+                    if (e.target === photoModal) {
+                        photoModal.classList.remove('visible');
+                    }
+                });
+            }
         }
 
+        function renderPeekAlbum(photos) {
+            const screen = document.getElementById('peek-album-screen');
+            const grid = screen.querySelector('.album-grid');
+            grid.innerHTML = ''; // Clear previous content
+    
+            if (!photos || photos.length === 0) {
+                grid.innerHTML = '<p class="placeholder-text">正在生成相册内容...</p>';
+                return;
+            }
+    
+            photos.forEach(photo => {
+                const photoEl = document.createElement('div');
+                photoEl.className = 'album-photo';
+                photoEl.dataset.imageDescription = photo.imageDescription;
+                photoEl.dataset.description = photo.description;
+    
+                const img = document.createElement('img');
+                img.src = 'https://i.postimg.cc/1tH6ds9g/1752301200490.jpg'; // 使用一个静态占位图
+                img.alt = "相册照片";
+                photoEl.appendChild(img);
+    
+                if (photo.type === 'video') {
+                    const videoIndicator = document.createElement('div');
+                    videoIndicator.className = 'video-indicator';
+                    videoIndicator.innerHTML = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>`;
+                    photoEl.appendChild(videoIndicator);
+                }
+                
+                photoEl.addEventListener('click', () => {
+                    const modal = document.getElementById('peek-photo-modal');
+                    const imgContainer = document.getElementById('peek-photo-image-container');
+                    const descriptionEl = document.getElementById('peek-photo-description');
+                    
+                    // 将AI生成的图片文字描述展示出来，而不是真的图片
+                    imgContainer.innerHTML = `<div style="padding: 20px; text-align: left; color: #555; font-size: 16px; line-height: 1.6; height: 100%; overflow-y: auto;">${photo.imageDescription}</div>`;
+                    // 显示角色对照片的批注
+                    descriptionEl.textContent = `批注：${photo.description}`;
+                    
+                    modal.classList.add('visible');
+                });
+    
+                grid.appendChild(photoEl);
+            });
+        }
+ 
         function renderPeekConversation(history, partnerName) {
             const titleEl = document.getElementById('peek-conversation-title');
             const messageAreaEl = document.getElementById('peek-message-area');
@@ -8339,7 +8522,7 @@ return `${seconds}秒`;
 
             // 最终结果数组
             const results = [];
-            const regex = /<(orange|div)(?:\s+char="([^"]*)")?>([\s\S]*?)<\/\1>|(\[[\s\S]*?\])/g;
+            const regex = /<(orange|div)(?:\s+char="([^"]*)")?>([\s\S]*?)<\/\1>|(\[(?:[^\]]*:|论坛分享|[^\]]*已接收礼物|[^\]]*的转账)[\s\S]*?\])/g;
 
             let lastIndex = 0;
             let match;
@@ -11038,6 +11221,16 @@ function renderForumPosts(posts) {
                    }
                    请为 ${char.realName} 编造3-5个最近的对话。对话内容需要强烈反映Ta的人设以及和我的聊天上下文。`;
                     break;
+                case 'album':
+                    prompt += `
+                    {
+                      "photos": [
+                        { "type": "photo", "imageDescription": "对一张照片的详细文字描述，例如：一张傍晚在海边的自拍，背景是橙色的晚霞和归来的渔船。", "description": "角色对这张照片的一句话批注，例如：那天的风很舒服。" },
+                        { "type": "video", "imageDescription": "对一段视频的详细文字描述，例如：一段在猫咖撸猫的视频，视频里有一只橘猫在打哈欠。", "description": "角色对这段视频的一句话批注，例如：下次还来这里！" }
+                      ]
+                    }
+                    请为 ${char.realName} 的相册生成5-8个条目（照片或视频）。内容需要与Ta的人设和我们的聊天上下文高度相关。'imageDescription' 是对这张照片/视频的详细文字描述，它将代替真实的图片展示给用户。'description' 是 ${char.realName} 自己对这张照片/视频的一句话批注，会显示在描述下方。`;
+                    break;
                 case 'memos':
                     prompt += `
                     {
@@ -11105,9 +11298,17 @@ function renderForumPosts(posts) {
                         renderPeekChatList(cachedData.conversations);
                         switchScreen('peek-messages-screen');
                         break;
+                    case 'album':
+                        renderPeekAlbum(cachedData.photos);
+                        switchScreen('peek-album-screen');
+                        break;
                     case 'memos':
                         renderMemosList(cachedData.memos);
                         switchScreen('peek-memos-screen');
+                        break;
+                    case 'album':
+                        renderPeekAlbum(cachedData.photos);
+                        switchScreen('peek-album-screen');
                         break;
                    case 'transfer':
                        renderPeekTransferStation(cachedData.entries);
@@ -11148,9 +11349,17 @@ function renderForumPosts(posts) {
                     targetContainer = document.getElementById('peek-chat-list-container');
                     targetContainer.innerHTML = '<p class="placeholder-text">正在生成对话列表...</p>';
                     break;
+                case 'album':
+                    switchScreen('peek-album-screen');
+                    renderPeekAlbum([]); // 渲染空状态，会显示“正在生成...”
+                    break;
                 case 'memos':
                     switchScreen('peek-memos-screen');
                     renderMemosList([]); // Render empty state with loading text
+                    break;
+                case 'album':
+                    switchScreen('peek-album-screen');
+                    renderPeekAlbum([]); // 渲染空状态，会显示“正在生成...”
                     break;
                case 'transfer':
                    switchScreen('peek-transfer-station-screen');
@@ -11204,6 +11413,7 @@ function renderForumPosts(posts) {
                 switch (appType) {
                     case 'messages': isValid = generatedData && Array.isArray(generatedData.conversations); break;
                     case 'memos': isValid = generatedData && Array.isArray(generatedData.memos); break;
+                    case 'album': isValid = generatedData && Array.isArray(generatedData.photos); break;
                     case 'cart': isValid = generatedData && Array.isArray(generatedData.items); break;
                     case 'transfer': isValid = generatedData && Array.isArray(generatedData.entries); break;
                     case 'browser': isValid = generatedData && Array.isArray(generatedData.history); break;
@@ -11224,6 +11434,8 @@ function renderForumPosts(posts) {
                     renderPeekChatList(generatedData.conversations);
                 } else if (appType === 'memos') {
                     renderMemosList(generatedData.memos);
+                } else if (appType === 'album') {
+                    renderPeekAlbum(generatedData.photos);
                 } else if (appType === 'transfer') {
                    renderPeekTransferStation(generatedData.entries);
                 } else if (appType === 'cart') {
@@ -11240,7 +11452,9 @@ function renderForumPosts(posts) {
                 delete peekContentCache[appType];
                 const errorMessage = "内容生成失败，AI返回格式错误，请手动刷新重试。";
                 showToast(errorMessage);
-                if (targetContainer) {
+                if (appType === 'album') {
+                    document.querySelector('#peek-album-screen .album-grid').innerHTML = `<p class="placeholder-text">内容生成失败，请刷新重试</p>`;
+                } else if (targetContainer) {
                     targetContainer.innerHTML = `<p class="placeholder-text">${errorMessage}</p>`;
                 }
             } finally {
