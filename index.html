@@ -7926,7 +7926,10 @@ if (htmlRegex.test(text)) {
                             lastMessageText = '新成员加入了群聊';
                         } else if (renameRegex.test(lastEverMsg.content)) {
                             lastMessageText = '群聊名称已修改';
+                            } else {
+                            lastMessageText = 'ta正在等你';
                         }
+                        
                     }
                 }
                 const li = document.createElement('li');
