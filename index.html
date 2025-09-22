@@ -3331,7 +3331,10 @@
     transform: rotate(180deg); /* 箭头旋转 */
 }
 /* --- 新增样式结束 --- */
-.message-time { display: none; }
+.message-time {
+     display: none !important;
+}
+
  
  
 /* --- Peek Steps App Styles (偷看步数应用样式) --- */
@@ -5352,10 +5355,12 @@
             // 分别保存角色和群组数据（包含消息）
             if (characters) {
                 for (const char of characters) {
-                    // 保存消息到分块存储
                     if (char.history && char.history.length > 0) {
-                        await dataStorage.saveChatMessages(char.id, 'private', char.history);
-                    }
+    await dataStorage.saveChatMessages(char.id, 'private', char.history);
+} else {
+    // 如果历史记录为空，则清空数据库中的消息
+    await dataStorage.clearChatMessages(char.id, 'private');
+}
                     // 保存角色基础信息（不包含history）
                     const { history, ...charData } = char;
                     charData.history = []; // 保持兼容性
@@ -5367,8 +5372,11 @@
                 for (const group of groups) {
                     // 保存消息到分块存储
                     if (group.history && group.history.length > 0) {
-                        await dataStorage.saveChatMessages(group.id, 'group', group.history);
-                    }
+    await dataStorage.saveChatMessages(group.id, 'group', group.history);
+} else {
+    // 如果历史记录为空，则清空数据库中的消息
+    await dataStorage.clearChatMessages(group.id, 'group');
+}
                     // 保存群组基础信息（不包含history）
                     const { history, ...groupData } = group;
                     groupData.history = []; // 保持兼容性
@@ -7897,8 +7905,7 @@ const plainTextMatch = text.match(/^\[.*?：([\s\S]*)\]$/);
 if (plainTextMatch && plainTextMatch[1]) {
     text = plainTextMatch[1].trim();
 }
-text = text.replace(/\[发送时间:.*?\]/g, '').trim();
-
+text = text.replace(/\[发送时间:.*?\]$/, '').trim(); // 擦掉时间戳
 const htmlRegex = /<[a-z][\s\S]*>/i;
 if (htmlRegex.test(text)) {
     lastMessageText = '[互动]';
@@ -8135,10 +8142,8 @@ const newTextRaw = messageEditInput.value.trim();
 if (newTextRaw) {
     let newText = newTextRaw; // 先把干净的文字存起来
 
-    // 如果开启了时间感知，就把新的时间戳加上
-    if (db.apiSettings && db.apiSettings.timePerceptionEnabled) {
-        newText += `[发送时间: ${getFormattedTimestamp(new Date())}]`;
-    }
+
+
 
     const oldContent = chat.history[messageIndex].content;
     const prefixMatch = oldContent.match(/(\[.*?的消息：)[\s\S]+\]/);
@@ -8633,7 +8638,7 @@ if (db.apiSettings && db.apiSettings.timePerceptionEnabled) {
         const thirtyMinutes = 30 * 60 * 1000; // 30分钟的毫秒数
 
         if (timeGap > thirtyMinutes) {
-            const systemNoticeContent = `[系统情景通知：与用户的上一次互动发生在${formatTimeGap(timeGap)}前。当前时刻是${getFormattedTimestamp(now)}。话题可能已经不连续。]`;
+            const systemNoticeContent = `[系统情景通知：与用户的上一次互动发生在${formatTimeGap(timeGap)}前。当前时刻是${getFormattedTimestamp(now)}。话题可能已经不连续，你需要作出相关反应。]`;
             const systemNoticeMessage = {
                 id: `msg_system_${Date.now()}`,
                 role: 'user', // 作为user消息发送给AI，但不会显示
@@ -8667,10 +8672,7 @@ if (renameRegex.test(text)) {
     messageContent = text;
 } else {
     let userText = text;
-    // 功能1：即时时间邮戳
-    if (db.apiSettings && db.apiSettings.timePerceptionEnabled) {
-        userText += `[发送时间: ${getFormattedTimestamp(new Date())}]`;
-    }
+
     messageContent = `[${myName}的消息：${userText}]`;
 }
 
