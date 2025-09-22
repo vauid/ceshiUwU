@@ -3239,6 +3239,7 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 35px;
+    flex-shrink: 0; /* 防止在flex布局中被压缩 */
 }
 
 .steps-progress-circle {
@@ -3246,8 +3247,8 @@
     height: 100%;
     border-radius: 50%;
     background: conic-gradient(
-        var(--primary-color) 0deg,
-        var(--primary-color) calc(3.6deg * var(--steps-percentage, 0)),
+        #4CAF50 0deg,
+        #4CAF50 calc(3.6deg * var(--steps-percentage, 0)),
         #e6e6e6 calc(3.6deg * var(--steps-percentage, 0)),
         #e6e6e6 360deg
     );
@@ -3269,7 +3270,7 @@
 .steps-count {
     font-size: 42px;
     font-weight: bold;
-    color: var(--primary-color);
+    color: #4CAF50;
 }
 
 .steps-label {
@@ -3309,16 +3310,15 @@
 
 .steps-annotation {
     width: 100%;
-    margin-top: auto; /* Pushes to the bottom */
-    padding: 20px;
-    background-color: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(5px);
-    border-top: 1px solid #e0e0e0;
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    margin-top: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     font-size: 14px;
     color: #555;
     line-height: 1.6;
     font-style: italic;
-    flex-shrink: 0;
 }
     </style>
     <style id="global-css-style"></style>
@@ -3952,7 +3952,7 @@
         <header class="app-header">
             <button class="back-btn" data-target="peek-screen">‹</button>
             <div class="title-container">
-                <h1 class="title">今日步数</h1>
+                <h1 class="title">步数</h1>
             </div>
             <div class="placeholder"></div> <!-- To balance the header -->
         </header>
@@ -3971,17 +3971,20 @@
             </div>
 
             <div class="steps-module">
-                <h3 class="steps-module-title">今日活动轨迹</h3>
+                <h3 class="steps-module-title">最近活动轨迹</h3>
                 <ul class="activity-track-list" id="activity-track-list">
                     <li class="activity-track-item">10:00 AM - 咖啡馆</li>
                     <li class="activity-track-item">01:30 PM - 市中心图书馆</li>
                     <li class="activity-track-item">06:00 PM - 河边公园</li>
+                    <li class="activity-track-item">07:00 PM - 健身房</li>
+                    <li class="activity-track-item">08:30 PM - 超市</li>
+                    <li class="activity-track-item">09:00 PM - 回家</li>
                 </ul>
             </div>
+            <div class="steps-annotation" id="steps-annotation-content">
+                “今天走了不少路，但感觉很充实。特别是下午在图书馆找到的那本书，感觉能看很久。”
+            </div>
         </main>
-        <footer class="steps-annotation" id="steps-annotation-content">
-            “今天走了不少路，但感觉很充实。特别是下午在图书馆找到的那本书，感觉能看很久。”
-        </footer>
     </div>
 
     <div id="peek-screen" class="screen">
@@ -4476,19 +4479,6 @@
             'album': { name: '相册', url: 'https://i.postimg.cc/qBcdpqNc/export202509221549335970.png' },
             'steps': { name: '步数', url: 'https://i.postimg.cc/5NndFrq6/export202509181824532800.png' },
             'unlock': { name: 'unlock！', url: 'https://i.postimg.cc/28zNyYWs/export202509221542593320.png' }
-        };
-
-        const peekStepsData = {
-            currentSteps: 4321,
-            goalSteps: 6000,
-            avatar: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg',
-            name: 'Char',
-            trajectory: [
-                "10:00 AM - 咖啡馆",
-                "01:30 PM - 市中心图书馆",
-                "06:00 PM - 河边公园"
-            ],
-            annotation: "“今天走了不少路，但感觉很充实。特别是下午在图书馆找到的那本书，感觉能看很久。”"
         };
 
         const simulatedMemos = [];
@@ -6122,12 +6112,7 @@ return Promise.resolve();
                 `;
                 iconEl.addEventListener('click', (e) => {
                     e.preventDefault();
-                    if (id === 'steps') {
-                        renderPeekSteps();
-                        switchScreen('peek-steps-screen');
-                    } else {
-                        generateAndRenderPeekContent(id);
-                    }
+                    generateAndRenderPeekContent(id);
                 });
                 appGrid.appendChild(iconEl);
             });
@@ -11379,20 +11364,32 @@ function renderForumPosts(posts) {
 
         init();
 
-        function renderPeekSteps() {
+        function renderPeekSteps(data) {
             const screen = document.getElementById('peek-steps-screen');
-            const data = peekStepsData; // Using the static data for now
-
+            
             const avatarEl = screen.querySelector('#steps-char-avatar');
             const nameEl = screen.querySelector('#steps-char-name');
             const currentStepsEl = screen.querySelector('#steps-current-count');
+            const goalStepsEl = screen.querySelector('.steps-label');
             const progressRingEl = screen.querySelector('#steps-progress-ring');
             const trackListEl = screen.querySelector('#activity-track-list');
             const annotationEl = screen.querySelector('#steps-annotation-content');
 
+            if (!data) {
+                // Display loading or empty state
+                nameEl.textContent = '...';
+                currentStepsEl.textContent = '----';
+                goalStepsEl.textContent = '/ 6000 步';
+                trackListEl.innerHTML = '<li class="activity-track-item">正在生成活动轨迹...</li>';
+                annotationEl.textContent = '正在生成角色批注...';
+                progressRingEl.style.setProperty('--steps-percentage', 0);
+                return;
+            }
+
             avatarEl.src = data.avatar;
             nameEl.textContent = data.name;
             currentStepsEl.textContent = data.currentSteps;
+            goalStepsEl.textContent = `/ ${data.goalSteps} 步`;
             
             const percentage = (data.currentSteps / data.goalSteps) * 100;
             progressRingEl.style.setProperty('--steps-percentage', percentage);
@@ -11433,6 +11430,25 @@ function renderForumPosts(posts) {
                       ]
                    }
                    请为 ${char.realName} 编造3-5个最近的对话。对话内容需要强烈反映Ta的人设以及和我的聊天上下文。`;
+                    break;
+                case 'steps':
+                    prompt += `
+                    {
+                      "currentSteps": 8102,
+                      "goalSteps": 6000,
+                      "avatar": "${char.avatar}",
+                      "name": "${char.realName}",
+                      "trajectory": [
+                        "08:30 AM - 公司楼下咖啡馆",
+                        "10:00 AM - 宠物用品店",
+                        "12:00 PM - 附近日料店",
+                        "03:00 PM - 回家路上的甜品店",
+                        "04:00 PM - 楼下的便利店",
+                        "06:30 PM - 健身房"
+                      ],
+                      "annotation": "角色对自己今天运动情况的批注"
+                    }
+                    请为 ${char.realName} 生成今天的步数信息。目标步数固定为6000，请生成当前步数，6条运动轨迹（禁止照搬示例）以及批注。内容需要与Ta的人设和我们的聊天上下文高度相关。`;
                     break;
                 case 'album':
                     prompt += `
@@ -11539,6 +11555,10 @@ function renderForumPosts(posts) {
                         renderPeekDrafts(cachedData.draft);
                         switchScreen('peek-drafts-screen');
                         break;
+                   case 'steps':
+                       renderPeekSteps(cachedData);
+                       switchScreen('peek-steps-screen');
+                       break;
                 }
                 return; // Stop execution since we used cache
             }
@@ -11570,10 +11590,6 @@ function renderForumPosts(posts) {
                     switchScreen('peek-memos-screen');
                     renderMemosList([]); // Render empty state with loading text
                     break;
-                case 'album':
-                    switchScreen('peek-album-screen');
-                    renderPeekAlbum([]); // 渲染空状态，会显示“正在生成...”
-                    break;
                case 'transfer':
                    switchScreen('peek-transfer-station-screen');
                    renderPeekTransferStation([]);
@@ -11589,6 +11605,10 @@ function renderForumPosts(posts) {
                 case 'drafts':
                     switchScreen('peek-drafts-screen');
                     renderPeekDrafts(null);
+                    break;
+                case 'steps':
+                    switchScreen('peek-steps-screen');
+                    renderPeekSteps(null); // Render empty state
                     break;
                 default:
                     showToast('无法打开');
@@ -11631,6 +11651,7 @@ function renderForumPosts(posts) {
                     case 'transfer': isValid = generatedData && Array.isArray(generatedData.entries); break;
                     case 'browser': isValid = generatedData && Array.isArray(generatedData.history); break;
                     case 'drafts': isValid = generatedData && generatedData.draft; break;
+                    case 'steps': isValid = generatedData && generatedData.currentSteps !== undefined; break;
                     default: isValid = false;
                 }
 
@@ -11657,6 +11678,8 @@ function renderForumPosts(posts) {
                     renderPeekBrowser(generatedData.history);
                 } else if (appType === 'drafts') {
                     renderPeekDrafts(generatedData.draft);
+                } else if (appType === 'steps') {
+                    renderPeekSteps(generatedData);
                 }
 
             } catch (error) {
