@@ -7346,6 +7346,15 @@ return Promise.resolve();
                 touchStartX = 0;
                 touchEndX = 0;
             }
+
+            // 新增：处理签名失焦的逻辑
+            homeScreen.addEventListener('click', (e) => {
+                const signatureWidget = document.getElementById('widget-signature');
+                // 如果点击的目标不是签名框，并且签名框当前是激活编辑状态
+                if (e.target !== signatureWidget && document.activeElement === signatureWidget) {
+                    signatureWidget.blur(); // 手动触发失焦
+                }
+            });
         }
 
         function applyWallpaper(url) {
@@ -7416,6 +7425,39 @@ return Promise.resolve();
                     }
                 }
             });
+
+         customizeForm.addEventListener('change', async (e) => {
+             if (e.target.matches('.widget-upload-input')) {
+                 const file = e.target.files[0];
+                 if (!file) return;
+ 
+                 const widgetPart = e.target.dataset.widgetTarget;
+                 const widgetProp = e.target.dataset.widgetProp;
+ 
+                 try {
+                     const compressedUrl = await compressImage(file, { quality: 0.8, maxWidth: 400, maxHeight: 400 });
+                     
+                     let targetInput;
+                     if (widgetProp) {
+                         targetInput = document.getElementById(`widget-input-${widgetPart}-${widgetProp}`);
+                     } else {
+                         targetInput = document.getElementById(`widget-input-${widgetPart}`);
+                     }
+ 
+                     if (targetInput) {
+                         targetInput.value = compressedUrl;
+                         // Manually trigger an input event to save the data
+                         targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                         showToast('图片已上传并压缩');
+                     }
+                 } catch (error) {
+                     console.error('Widget image compression failed:', error);
+                     showToast('图片压缩失败，请重试');
+                 } finally {
+                     e.target.value = null; // Reset file input
+                 }
+             }
+         });
         }
 
                 function renderCustomizeForm() {
@@ -7470,24 +7512,38 @@ return Promise.resolve();
                     </div>
                     <div class="form-group">
                         <label>中心圆圈图片URL</label>
-                        <input type="url" class="form-group" placeholder="粘贴图片URL" value="${widgetSettings.centralCircleImage}" data-widget-part="centralCircleImage">
+                        <input type="url" class="form-group" placeholder="粘贴图片URL" value="${widgetSettings.centralCircleImage}" data-widget-part="centralCircleImage" id="widget-input-centralCircleImage">
+                        <input type="file" id="widget-upload-centralCircleImage" data-widget-target="centralCircleImage" class="widget-upload-input" accept="image/*" style="display:none;">
+                        <label for="widget-upload-centralCircleImage" class="btn btn-secondary btn-small" style="margin-top: 5px;">本地上传</label>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
                         <div>
                             <div class="form-group"><label>左上角文字</label><input type="text" class="form-group" value="${widgetSettings.topLeft.text}" data-widget-part="topLeft" data-widget-prop="text"></div>
-                            <div class="form-group"><label>左上角图片URL</label><input type="url" class="form-group" value="${widgetSettings.topLeft.imageUrl}" data-widget-part="topLeft" data-widget-prop="imageUrl"></div>
+                            <div class="form-group"><label>左上角图片URL</label><input type="url" class="form-group" value="${widgetSettings.topLeft.imageUrl}" data-widget-part="topLeft" data-widget-prop="imageUrl" id="widget-input-topLeft-imageUrl">
+                                <input type="file" id="widget-upload-topLeft-imageUrl" data-widget-target="topLeft" data-widget-prop="imageUrl" class="widget-upload-input" accept="image/*" style="display:none;">
+                                <label for="widget-upload-topLeft-imageUrl" class="btn btn-secondary btn-small" style="margin-top: 5px;">本地上传</label>
+                            </div>
                         </div>
                         <div>
                             <div class="form-group"><label>右上角文字</label><input type="text" class="form-group" value="${widgetSettings.topRight.text}" data-widget-part="topRight" data-widget-prop="text"></div>
-                            <div class="form-group"><label>右上角图片URL</label><input type="url" class="form-group" value="${widgetSettings.topRight.imageUrl}" data-widget-part="topRight" data-widget-prop="imageUrl"></div>
+                            <div class="form-group"><label>右上角图片URL</label><input type="url" class="form-group" value="${widgetSettings.topRight.imageUrl}" data-widget-part="topRight" data-widget-prop="imageUrl" id="widget-input-topRight-imageUrl">
+                                <input type="file" id="widget-upload-topRight-imageUrl" data-widget-target="topRight" data-widget-prop="imageUrl" class="widget-upload-input" accept="image/*" style="display:none;">
+                                <label for="widget-upload-topRight-imageUrl" class="btn btn-secondary btn-small" style="margin-top: 5px;">本地上传</label>
+                            </div>
                         </div>
                         <div>
                             <div class="form-group"><label>左下角文字</label><input type="text" class="form-group" value="${widgetSettings.bottomLeft.text}" data-widget-part="bottomLeft" data-widget-prop="text"></div>
-                            <div class="form-group"><label>左下角图片URL</label><input type="url" class="form-group" value="${widgetSettings.bottomLeft.imageUrl}" data-widget-part="bottomLeft" data-widget-prop="imageUrl"></div>
+                            <div class="form-group"><label>左下角图片URL</label><input type="url" class="form-group" value="${widgetSettings.bottomLeft.imageUrl}" data-widget-part="bottomLeft" data-widget-prop="imageUrl" id="widget-input-bottomLeft-imageUrl">
+                                <input type="file" id="widget-upload-bottomLeft-imageUrl" data-widget-target="bottomLeft" data-widget-prop="imageUrl" class="widget-upload-input" accept="image/*" style="display:none;">
+                                <label for="widget-upload-bottomLeft-imageUrl" class="btn btn-secondary btn-small" style="margin-top: 5px;">本地上传</label>
+                            </div>
                         </div>
                         <div>
                             <div class="form-group"><label>右下角文字</label><input type="text" class="form-group" value="${widgetSettings.bottomRight.text}" data-widget-part="bottomRight" data-widget-prop="text"></div>
-                            <div class="form-group"><label>右下角图片URL</label><input type="url" class="form-group" value="${widgetSettings.bottomRight.imageUrl}" data-widget-part="bottomRight" data-widget-prop="imageUrl"></div>
+                            <div class="form-group"><label>右下角图片URL</label><input type="url" class="form-group" value="${widgetSettings.bottomRight.imageUrl}" data-widget-part="bottomRight" data-widget-prop="imageUrl" id="widget-input-bottomRight-imageUrl">
+                                <input type="file" id="widget-upload-bottomRight-imageUrl" data-widget-target="bottomRight" data-widget-prop="imageUrl" class="widget-upload-input" accept="image/*" style="display:none;">
+                                <label for="widget-upload-bottomRight-imageUrl" class="btn btn-secondary btn-small" style="margin-top: 5px;">本地上传</label>
+                            </div>
                         </div>
                     </div>
                 </div>
