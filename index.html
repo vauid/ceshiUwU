@@ -5518,7 +5518,7 @@ return Promise.resolve();
                 const journalWorldBooks = (chat.journalWorldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
                 const worldBooksContent = journalWorldBooks.map(wb => wb.content).join('\n\n');
 
-                let summaryPrompt = `你是一个日记整理助手。请以角色 "${chat.remarkName || chat.name}" 的第一人称视角，总结以下聊天记录。请专注于重要的情绪、事件和细节。\n\n`;
+                let summaryPrompt = `你是一个日记整理助手。请以角色 "${chat.remarkName || chat.name}" 的第一人称视角，总结以下聊天记录。请专注于重要的情绪、事件和细节，语言内省而克制，带有诗意与隐喻感，用冷静的笔触将对话片段凝练为思绪流动与寓言化的自白。\n\n`;
                 summaryPrompt += "为了更好地理解角色和背景，请参考以下信息：\n";
                 summaryPrompt += "=====\n";
 
