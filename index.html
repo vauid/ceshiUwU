@@ -1737,6 +1737,14 @@
             margin-left: 10px;
         }
 
+        #peek-app-icons-settings .icon-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
         /* 主页自定义小部件样式 (*/
 .home-widget-container {
     position: relative;
@@ -4260,14 +4268,47 @@
     </div>
     <!-- New Peek Wallpaper Modal -->
     <div id="peek-wallpaper-modal" class="modal-overlay">
-        <div class="modal-window">
-            <h3>更换“偷看”页面壁纸</h3>
-            <form id="peek-wallpaper-form">
-                <div class="wallpaper-preview" id="peek-wallpaper-preview"><span>当前壁纸预览</span></div>
-                <input type="file" id="peek-wallpaper-upload" accept="image/*" style="display: none;">
-                <label for="peek-wallpaper-upload" class="btn btn-primary">从相册选择新壁纸</label>
-                <button type="submit" class="btn btn-secondary" style="margin-top: 10px;">保存壁纸</button>
-            </form>
+        <div class="modal-window" style="max-height: 80vh; overflow-y: auto;">
+            <h3>“偷看”页面自定义</h3>
+            <div class="collapsible-section open">
+                <div class="collapsible-header">
+                    <h4>页面壁纸</h4>
+                    <span class="collapsible-arrow">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <form id="peek-wallpaper-form">
+                        <div class="form-group">
+                            <label for="peek-wallpaper-url-input">壁纸URL</label>
+                            <input type="url" id="peek-wallpaper-url-input" class="form-group" placeholder="粘贴图片URL">
+                        </div>
+                        <p style="text-align:center; color:#888; margin: -10px 0 15px;">或</p>
+                        <input type="file" id="peek-wallpaper-upload" accept="image/*" style="display: none;">
+                        <label for="peek-wallpaper-upload" class="btn btn-secondary">从本地上传</label>
+                    </form>
+                </div>
+            </div>
+            <div class="collapsible-section">
+                <div class="collapsible-header">
+                    <h4>应用图标</h4>
+                    <span class="collapsible-arrow">▼</span>
+                </div>
+                <div class="collapsible-content" id="peek-app-icons-settings">
+                    <!-- App icon settings will be rendered here by JS -->
+                </div>
+            </div>
+             <div class="collapsible-section">
+                <div class="collapsible-header">
+                    <h4>微博(Unlock)小号</h4>
+                    <span class="collapsible-arrow">▼</span>
+                </div>
+                <div class="collapsible-content">
+                    <div class="form-group">
+                        <label for="peek-unlock-avatar-url">头像URL</label>
+                        <input type="url" id="peek-unlock-avatar-url" class="form-group" placeholder="粘贴图片URL">
+                    </div>
+                </div>
+            </div>
+            <button id="save-peek-settings-btn" class="btn btn-primary" style="margin-top: 20px;">保存所有更改</button>
         </div>
     </div>
     <div id="peek-photo-modal" class="modal-overlay">
@@ -4643,9 +4684,6 @@
             bubbleCssPresets: [],
             myPersonaPresets: [],
             forumPosts: [],
-            peekScreenSettings: {
-                wallpaper: ''
-            },
             globalCss: '',
             globalCssPresets: [],
             homeSignature: '编辑个性签名...',
@@ -5465,6 +5503,9 @@ return Promise.resolve();
                     if (!charData.memoryJournals) charData.memoryJournals = []; // Ensure memoryJournals exists
                     if (!charData.journalWorldBookIds) charData.journalWorldBookIds = []; // 新增：确保字段存在
  
+                    if (!charData.peekScreenSettings) {
+                       charData.peekScreenSettings = { wallpaper: '', customIcons: {}, unlockAvatar: '' };
+                    }
                      return charData;
                  }
                 return null;
@@ -6055,16 +6096,7 @@ return Promise.resolve();
 
             // New simplified settings functionality
             peekSettingsBtn?.addEventListener('click', () => {
-                // Load current wallpaper into preview
-                const currentWallpaper = db.peekScreenSettings.wallpaper;
-                if (currentWallpaper) {
-                    peekWallpaperPreview.style.backgroundImage = `url(${currentWallpaper})`;
-                    peekWallpaperPreview.textContent = '';
-                } else {
-                    peekWallpaperPreview.style.backgroundImage = 'none';
-                    peekWallpaperPreview.textContent = '当前无壁纸';
-                }
-                peekWallpaperPreview.dataset.newWallpaper = '';
+                renderPeekSettings();
                 peekWallpaperModal.classList.add('visible');
             });
 
@@ -6073,25 +6105,61 @@ return Promise.resolve();
                 if (file) {
                     try {
                         const compressedUrl = await compressImage(file, { quality: 0.85, maxWidth: 1080, maxHeight: 1920 });
-                        peekWallpaperPreview.style.backgroundImage = `url(${compressedUrl})`;
-                        peekWallpaperPreview.textContent = '';
-                        peekWallpaperPreview.dataset.newWallpaper = compressedUrl;
+                        document.getElementById('peek-wallpaper-url-input').value = compressedUrl;
+                        showToast('图片已压缩并填入URL输入框');
                     } catch (error) {
                         showToast('壁纸压缩失败，请重试');
                     }
                 }
             });
 
-            peekWallpaperForm?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const newWallpaper = peekWallpaperPreview.dataset.newWallpaper;
-                if (newWallpaper) {
-                    db.peekScreenSettings.wallpaper = newWallpaper;
-                    await saveData();
-                    renderPeekScreen(); // Re-render to apply new wallpaper
-                    showToast('壁纸已更换！');
+            // Combined save button for all peek settings
+            document.getElementById('save-peek-settings-btn')?.addEventListener('click', async () => {
+                const character = db.characters.find(c => c.id === currentChatId);
+                if (!character) {
+                    showToast('错误：未找到当前角色');
+                    return;
                 }
+
+                if (!character.peekScreenSettings) {
+                    character.peekScreenSettings = { wallpaper: '', customIcons: {}, unlockAvatar: '' };
+                }
+
+                // Save wallpaper
+                character.peekScreenSettings.wallpaper = document.getElementById('peek-wallpaper-url-input').value.trim();
+
+                // Save custom app icons
+                const iconInputs = document.querySelectorAll('#peek-app-icons-settings input[type="url"]');
+                iconInputs.forEach(input => {
+                    const appId = input.dataset.appId;
+                    const newUrl = input.value.trim();
+                    if (newUrl) {
+                        if (!character.peekScreenSettings.customIcons) {
+                            character.peekScreenSettings.customIcons = {};
+                        }
+                        character.peekScreenSettings.customIcons[appId] = newUrl;
+                    } else {
+                        if (character.peekScreenSettings.customIcons) {
+                            delete character.peekScreenSettings.customIcons[appId];
+                        }
+                    }
+                });
+                
+                // Save unlock avatar
+                character.peekScreenSettings.unlockAvatar = document.getElementById('peek-unlock-avatar-url').value.trim();
+
+                await saveData();
+                renderPeekScreen(); // Re-render to apply all changes
+                showToast('“偷看”页面设置已保存！');
                 peekWallpaperModal.classList.remove('visible');
+            });
+
+            // Add collapsible functionality
+            peekWallpaperModal.addEventListener('click', (e) => {
+                const header = e.target.closest('.collapsible-header');
+                if (header) {
+                    header.parentElement.classList.toggle('open');
+                }
             });
 
             const peekMessagesScreen = document.getElementById('peek-messages-screen');
@@ -6109,14 +6177,16 @@ return Promise.resolve();
                             showToast('找不到对话记录');
                         }
                     }
+                } else if (e.target.closest('.action-btn')) {
+                    generateAndRenderPeekContent('messages', { forceRefresh: true });
                 }
             });
-            
-            // Add refresh listeners for static peek screens
-            document.querySelector('#peek-messages-screen .action-btn').addEventListener('click', () => generateAndRenderPeekContent('messages', { forceRefresh: true }));
-            document.querySelector('#peek-conversation-screen .action-btn').addEventListener('click', () => {
-                // Refreshing a conversation should re-fetch the whole message list
-                generateAndRenderPeekContent('messages', { forceRefresh: true });
+
+            const peekConversationScreen = document.getElementById('peek-conversation-screen');
+            peekConversationScreen.addEventListener('click', (e) => {
+                if (e.target.closest('.action-btn')) {
+                    generateAndRenderPeekContent('messages', { forceRefresh: true });
+                }
             });
 
             // 为相册刷新按钮添加事件监听
@@ -6199,7 +6269,9 @@ return Promise.resolve();
             }
 
             const { nickname, handle, bio, posts } = data;
-            const fixedAvatar = 'https://i.postimg.cc/507KX4jz/chan-62.png';
+            const character = db.characters.find(c => c.id === currentChatId);
+            const peekSettings = character?.peekScreenSettings || { unlockAvatar: '' };
+            const fixedAvatar = peekSettings.unlockAvatar || 'https://i.postimg.cc/507KX4jz/chan-62.png';
 
             // Random numbers for stats
             const randomFollowers = (Math.random() * 5 + 1).toFixed(1) + 'k';
@@ -6330,12 +6402,15 @@ return Promise.resolve();
                 <div class="app-grid"></div>
             `;
 
+            const character = db.characters.find(c => c.id === currentChatId);
+            const peekSettings = character?.peekScreenSettings || { wallpaper: '', customIcons: {} };
+
             // Apply wallpaper to the parent screen element
-            const wallpaper = db.peekScreenSettings.wallpaper;
+            const wallpaper = peekSettings.wallpaper;
             if (wallpaper) {
                 peekScreen.style.backgroundImage = `url(${wallpaper})`;
             } else {
-                peekScreen.style.backgroundImage = `url(${db.wallpaper})`;
+                peekScreen.style.backgroundImage = `url(${db.wallpaper})`; // Fallback to global wallpaper
             }
             peekScreen.style.backgroundSize = 'cover';
             peekScreen.style.backgroundPosition = 'center';
@@ -6347,9 +6422,11 @@ return Promise.resolve();
                 const iconEl = document.createElement('a');
                 iconEl.href = '#';
                 iconEl.className = 'app-icon';
-                iconEl.dataset.peekAppId = id; // 新增此行，为CSS选择器提供钩子
+                iconEl.dataset.peekAppId = id;
+                const customIconUrl = peekSettings.customIcons?.[id];
+                const iconUrl = customIconUrl || iconData.url;
                 iconEl.innerHTML = `
-                    <img src="${iconData.url}" alt="${iconData.name}" class="icon-img">
+                    <img src="${iconUrl}" alt="${iconData.name}" class="icon-img">
                     <span class="app-name">${iconData.name}</span>
                 `;
                 iconEl.addEventListener('click', (e) => {
@@ -7830,8 +7907,9 @@ if (htmlRegex.test(text)) {
                     customBubbleCss: '',
                     memoryJournals: [],
                     journalWorldBookIds: [], // 新增
+                    peekScreenSettings: { wallpaper: '', customIcons: {}, unlockAvatar: '' }, // 新增
  lastUserMessageTimestamp: null, // 新增：用于记录最后消息时间
-                };
+               };
                 db.characters.push(newChar);
                 await saveData();
                 renderChatList();
@@ -11608,7 +11686,9 @@ function renderForumPosts(posts) {
 
         function renderPeekSteps(data) {
             const screen = document.getElementById('peek-steps-screen');
-            
+            const char = db.characters.find(c => c.id === currentChatId);
+            if (!char) return; // 如果找不到角色，则不渲染
+
             const avatarEl = screen.querySelector('#steps-char-avatar');
             const nameEl = screen.querySelector('#steps-char-name');
             const currentStepsEl = screen.querySelector('#steps-current-count');
@@ -11617,23 +11697,24 @@ function renderForumPosts(posts) {
             const trackListEl = screen.querySelector('#activity-track-list');
             const annotationEl = screen.querySelector('#steps-annotation-content');
 
+            // 无论AI数据是否返回，都先渲染固定信息
+            avatarEl.src = char.avatar;
+            nameEl.textContent = char.realName;
+            goalStepsEl.textContent = '/ 6000 步';
+
             if (!data) {
-                // Display loading or empty state
-                nameEl.textContent = '...';
+                // Display loading or empty state for dynamic content
                 currentStepsEl.textContent = '----';
-                goalStepsEl.textContent = '/ 6000 步';
                 trackListEl.innerHTML = '<li class="activity-track-item">正在生成活动轨迹...</li>';
                 annotationEl.textContent = '正在生成角色批注...';
                 progressRingEl.style.setProperty('--steps-percentage', 0);
                 return;
             }
 
-            avatarEl.src = data.avatar;
-            nameEl.textContent = data.name;
+            // 填充AI返回的动态内容
             currentStepsEl.textContent = data.currentSteps;
-            goalStepsEl.textContent = `/ ${data.goalSteps} 步`;
             
-            const percentage = (data.currentSteps / data.goalSteps) * 100;
+            const percentage = (data.currentSteps / 6000) * 100;
             progressRingEl.style.setProperty('--steps-percentage', percentage);
 
             trackListEl.innerHTML = data.trajectory.map(item => `<li class="activity-track-item">${item}</li>`).join('');
@@ -11677,9 +11758,6 @@ function renderForumPosts(posts) {
                     prompt += `
                     {
                       "currentSteps": 8102,
-                      "goalSteps": 6000,
-                      "avatar": "${char.avatar}",
-                      "name": "${char.realName}",
                       "trajectory": [
                         "08:30 AM - 公司楼下咖啡馆",
                         "10:00 AM - 宠物用品店",
@@ -11690,7 +11768,7 @@ function renderForumPosts(posts) {
                       ],
                       "annotation": "角色对自己今天运动情况的批注"
                     }
-                    请为 ${char.realName} 生成今天的步数信息。目标步数固定为6000，请生成当前步数，6条运动轨迹（禁止照搬示例）以及批注。内容需要与Ta的人设和我们的聊天上下文高度相关。`;
+                    请为 ${char.realName} 生成今天的步数信息。你只需要生成当前步数(currentSteps)，6条运动轨迹(trajectory)（禁止照搬示例）以及批注(annotation)。内容需要与Ta的人设和我们的聊天上下文高度相关。`;
                     break;
                 case 'album':
                     prompt += `
@@ -11965,6 +12043,66 @@ function renderForumPosts(posts) {
                 }
             } finally {
                 generatingPeekApps.delete(appType); // Release the lock for this specific app
+            }
+        }
+
+        function renderPeekSettings() {
+            const character = db.characters.find(c => c.id === currentChatId);
+            if (!character) return;
+
+            const peekSettings = character.peekScreenSettings || { wallpaper: '', customIcons: {}, unlockAvatar: '' };
+
+            // Populate wallpaper
+            document.getElementById('peek-wallpaper-url-input').value = peekSettings.wallpaper || '';
+
+            const iconsContainer = document.getElementById('peek-app-icons-settings');
+            iconsContainer.innerHTML = '';
+
+            Object.keys(peekScreenApps).forEach(appId => {
+                const app = peekScreenApps[appId];
+                const currentIcon = peekSettings.customIcons?.[appId] || app.url;
+
+                const itemEl = document.createElement('div');
+                itemEl.className = 'icon-custom-item';
+                itemEl.innerHTML = `
+                    <img src="${currentIcon}" alt="${app.name}" class="icon-preview">
+                    <div class="icon-details">
+                        <p>${app.name}</p>
+                        <input type="url" class="form-group" data-app-id="${appId}" placeholder="粘贴新的图标URL" value="${peekSettings.customIcons?.[appId] || ''}">
+                    </div>
+                    <input type="file" id="peek-icon-upload-${appId}" data-app-id="${appId}" accept="image/*" style="display:none;">
+                    <label for="peek-icon-upload-${appId}" class="btn btn-small btn-neutral" style="font-size: 12px;">上传</label>
+                `;
+                iconsContainer.appendChild(itemEl);
+            });
+
+            // Add event listeners for all new upload buttons
+            iconsContainer.querySelectorAll('input[type="file"]').forEach(uploadInput => {
+                uploadInput.addEventListener('change', handlePeekIconUpload);
+            });
+            
+            // Populate unlock avatar url
+            document.getElementById('peek-unlock-avatar-url').value = peekSettings.unlockAvatar || '';
+        }
+
+        async function handlePeekIconUpload(e) {
+            const file = e.target.files[0];
+            const appId = e.target.dataset.appId;
+            if (file && appId) {
+                try {
+                    const compressedUrl = await compressImage(file, { quality: 0.8, maxWidth: 120, maxHeight: 120 });
+                    const urlInput = document.querySelector(`#peek-app-icons-settings input[data-app-id="${appId}"]`);
+                    const previewImg = urlInput.closest('.icon-custom-item').querySelector('.icon-preview');
+                    if (urlInput) {
+                        urlInput.value = compressedUrl;
+                    }
+                    if (previewImg) {
+                        previewImg.src = compressedUrl;
+                    }
+                    showToast(`${peekScreenApps[appId].name} 图标已上传并压缩`);
+                } catch (error) {
+                    showToast('图标压缩失败，请重试');
+                }
             }
         }
 
