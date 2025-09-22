@@ -3077,6 +3077,7 @@
 /* 现在，我们单独给输入框加上样式，让它自己看起来像个完整的输入栏 */
 #forum-search-input {
     flex-grow: 1; /* 让它自动占据大部分空间 */
+    min-width: 0; /* 允许输入框在flex布局中无限缩小，防止溢出 */
     border: 1px solid rgba(255, 192, 203, 0.3); /* 一个非常淡的粉色边框 */
     background-color: rgba(255, 255, 255, 0.7); /* 半透明白底 */
     backdrop-filter: blur(8px);
