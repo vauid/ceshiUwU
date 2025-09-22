@@ -3185,6 +3185,141 @@
 .message-time { display: none; }
  
  
+/* --- Peek Steps App Styles (偷看步数应用样式) --- */
+#peek-steps-screen {
+    background-color: #f0f2f5;
+    color: #1c1e21;
+}
+
+
+#peek-steps-screen .app-header {
+    background-color: #f0f2f5;
+    border-bottom: 1px solid #dcdcdc;
+}
+
+#peek-steps-screen .app-header .title,
+#peek-steps-screen .app-header .back-btn {
+    color: #1c1e21;
+}
+
+#peek-steps-screen .content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.steps-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 30px;
+    padding: 0 10px;
+}
+
+.steps-header-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+
+.steps-header-name {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.steps-progress-container {
+    width: 220px;
+    height: 220px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 35px;
+}
+
+.steps-progress-circle {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(
+        var(--primary-color) 0deg,
+        var(--primary-color) calc(3.6deg * var(--steps-percentage, 0)),
+        #e6e6e6 calc(3.6deg * var(--steps-percentage, 0)),
+        #e6e6e6 360deg
+    );
+    transition: background 0.5s ease-in-out;
+}
+
+.steps-progress-inner {
+    position: absolute;
+    width: 85%;
+    height: 85%;
+    background-color: #f0f2f5;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.steps-count {
+    font-size: 42px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.steps-label {
+    font-size: 14px;
+    color: #65676b;
+    margin-top: 5px;
+}
+
+.steps-module {
+    width: 100%;
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.steps-module-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.activity-track-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.activity-track-item {
+    font-size: 15px;
+    color: #333;
+    padding: 8px 0;
+}
+
+.steps-annotation {
+    width: 100%;
+    margin-top: auto; /* Pushes to the bottom */
+    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(5px);
+    border-top: 1px solid #e0e0e0;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+    font-style: italic;
+    flex-shrink: 0;
+}
     </style>
     <style id="global-css-style"></style>
 </head>
@@ -3812,6 +3947,43 @@
         </main>
     </div>
 
+    <!-- Peek Steps App Screen -->
+    <div id="peek-steps-screen" class="screen">
+        <header class="app-header">
+            <button class="back-btn" data-target="peek-screen">‹</button>
+            <div class="title-container">
+                <h1 class="title">今日步数</h1>
+            </div>
+            <div class="placeholder"></div> <!-- To balance the header -->
+        </header>
+        <main class="content">
+            <div class="steps-header">
+                <img src="https://i.postimg.cc/Y96LPskq/o-o-2.jpg" alt="Char Avatar" class="steps-header-avatar" id="steps-char-avatar">
+                <span class="steps-header-name" id="steps-char-name">Char</span>
+            </div>
+
+            <div class="steps-progress-container">
+                <div class="steps-progress-circle" id="steps-progress-ring"></div>
+                <div class="steps-progress-inner">
+                    <div class="steps-count" id="steps-current-count">4321</div>
+                    <div class="steps-label">/ 6000 步</div>
+                </div>
+            </div>
+
+            <div class="steps-module">
+                <h3 class="steps-module-title">今日活动轨迹</h3>
+                <ul class="activity-track-list" id="activity-track-list">
+                    <li class="activity-track-item">10:00 AM - 咖啡馆</li>
+                    <li class="activity-track-item">01:30 PM - 市中心图书馆</li>
+                    <li class="activity-track-item">06:00 PM - 河边公园</li>
+                </ul>
+            </div>
+        </main>
+        <footer class="steps-annotation" id="steps-annotation-content">
+            “今天走了不少路，但感觉很充实。特别是下午在图书馆找到的那本书，感觉能看很久。”
+        </footer>
+    </div>
+
     <div id="peek-screen" class="screen">
         <header class="app-header">
             <button class="back-btn" data-target="chat-room-screen">‹</button>
@@ -4304,6 +4476,19 @@
             'album': { name: '相册', url: 'https://i.postimg.cc/qBcdpqNc/export202509221549335970.png' },
             'steps': { name: '步数', url: 'https://i.postimg.cc/5NndFrq6/export202509181824532800.png' },
             'unlock': { name: 'unlock！', url: 'https://i.postimg.cc/28zNyYWs/export202509221542593320.png' }
+        };
+
+        const peekStepsData = {
+            currentSteps: 4321,
+            goalSteps: 6000,
+            avatar: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg',
+            name: 'Char',
+            trajectory: [
+                "10:00 AM - 咖啡馆",
+                "01:30 PM - 市中心图书馆",
+                "06:00 PM - 河边公园"
+            ],
+            annotation: "“今天走了不少路，但感觉很充实。特别是下午在图书馆找到的那本书，感觉能看很久。”"
         };
 
         const simulatedMemos = [];
@@ -5937,7 +6122,12 @@ return Promise.resolve();
                 `;
                 iconEl.addEventListener('click', (e) => {
                     e.preventDefault();
-                    generateAndRenderPeekContent(id);
+                    if (id === 'steps') {
+                        renderPeekSteps();
+                        switchScreen('peek-steps-screen');
+                    } else {
+                        generateAndRenderPeekContent(id);
+                    }
                 });
                 appGrid.appendChild(iconEl);
             });
@@ -8523,7 +8713,7 @@ return `${seconds}秒`;
 
             // 最终结果数组
             const results = [];
-            const regex = /<(orange|div)(?:\s+char="([^"]*)")?>([\s\S]*?)<\/\1>|(\[(?:[^\]]*:|论坛分享|[^\]]*已接收礼物|[^\]]*的转账)[\s\S]*?\])/g;
+            const regex = /<(orange|div)(?:\s+char="([^"]*)")?>([\s\S]*?)<\/\1>|(\[[\s\S]*?\])/g;
 
             let lastIndex = 0;
             let match;
@@ -11188,6 +11378,28 @@ function renderForumPosts(posts) {
 
 
         init();
+
+        function renderPeekSteps() {
+            const screen = document.getElementById('peek-steps-screen');
+            const data = peekStepsData; // Using the static data for now
+
+            const avatarEl = screen.querySelector('#steps-char-avatar');
+            const nameEl = screen.querySelector('#steps-char-name');
+            const currentStepsEl = screen.querySelector('#steps-current-count');
+            const progressRingEl = screen.querySelector('#steps-progress-ring');
+            const trackListEl = screen.querySelector('#activity-track-list');
+            const annotationEl = screen.querySelector('#steps-annotation-content');
+
+            avatarEl.src = data.avatar;
+            nameEl.textContent = data.name;
+            currentStepsEl.textContent = data.currentSteps;
+            
+            const percentage = (data.currentSteps / data.goalSteps) * 100;
+            progressRingEl.style.setProperty('--steps-percentage', percentage);
+
+            trackListEl.innerHTML = data.trajectory.map(item => `<li class="activity-track-item">${item}</li>`).join('');
+            annotationEl.textContent = data.annotation;
+        }
 
         function generatePeekContentPrompt(char, appType, mainChatContext) {
             const appNameMapping = {
