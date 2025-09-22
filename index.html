@@ -7775,8 +7775,13 @@ if (newTextRaw) {
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
 
-let userText = textMatch[1].trim();
-bubbleElement.textContent = userText.replace(/\[发送时间:.*?\]/g, '').trim();
+let userText = textMatch[1].trim().replace(/\[发送时间:.*?\]/g, '').trim();
+const htmlRegex = /<[a-z][\s\S]*>/i;
+if (htmlRegex.test(userText)) {
+    bubbleElement.innerHTML = userText;
+} else {
+    bubbleElement.textContent = userText;
+}
                 if (!chat.useCustomBubbleCss) {
                     bubbleElement.style.backgroundColor = bubbleTheme.bg;
                     bubbleElement.style.color = bubbleTheme.text;
