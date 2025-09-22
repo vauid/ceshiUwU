@@ -6271,7 +6271,7 @@ return Promise.resolve();
             const { nickname, handle, bio, posts } = data;
             const character = db.characters.find(c => c.id === currentChatId);
             const peekSettings = character?.peekScreenSettings || { unlockAvatar: '' };
-            const fixedAvatar = peekSettings.unlockAvatar || 'https://i.postimg.cc/507KX4jz/chan-62.png';
+            const fixedAvatar = peekSettings.unlockAvatar || 'https://i.postimg.cc/SNwL1XwR/chan-11.png';
 
             // Random numbers for stats
             const randomFollowers = (Math.random() * 5 + 1).toFixed(1) + 'k';
