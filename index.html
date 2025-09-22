@@ -1972,6 +1972,147 @@
             display: block;
         }
 
+    /* --- Peek Unlock Screen (Social Media) --- */
+    #peek-unlock-screen {
+        background-color: #fff;
+        color: #262626;
+    }
+
+    #peek-unlock-screen .app-header .title,
+    #peek-unlock-screen .app-header .back-btn,
+    #peek-unlock-screen .app-header .action-btn {
+        color: #262626;
+    }
+
+    #peek-unlock-screen .content {
+        padding: 0;
+    }
+
+    .unlock-profile-header {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+    }
+
+    .unlock-profile-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin-right: 28px;
+        object-fit: cover;
+    }
+
+    .unlock-profile-info {
+        flex-grow: 1;
+    }
+
+    .unlock-profile-username {
+        font-size: 22px;
+        font-weight: 300;
+        margin: 0 0 4px 0;
+    }
+
+    .unlock-profile-handle {
+        font-size: 14px;
+        color: #8e8e8e;
+        margin: 0;
+    }
+
+    .unlock-profile-bio {
+        padding: 0 16px 16px;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .unlock-profile-stats {
+        display: flex;
+        justify-content: space-around;
+        text-align: center;
+        padding: 12px 0;
+        border-top: 1px solid #efefef;
+        border-bottom: 1px solid #efefef;
+    }
+
+    .unlock-profile-stat {
+        font-size: 14px;
+    }
+
+    .unlock-profile-stat .count {
+        font-weight: 600;
+        display: block;
+    }
+
+    .unlock-profile-stat .label {
+        color: #8e8e8e;
+    }
+
+    .unlock-post-feed {
+        padding: 0;
+        background-color: #f9f9f9;
+    }
+
+    .unlock-post-card {
+        background-color: #fff;
+        border-bottom: 1px solid #efefef;
+        padding: 16px;
+    }
+
+    .unlock-post-card-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .unlock-post-card-header img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 12px;
+    }
+
+    .unlock-post-card-author-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .unlock-post-card-author-info .username {
+        font-weight: 600;
+        font-size: 15px;
+    }
+
+    .unlock-post-card-author-info .timestamp {
+        font-size: 12px;
+        color: #8e8e8e;
+    }
+
+    .unlock-post-card-content {
+        font-size: 15px;
+        line-height: 1.6;
+        margin-bottom: 12px;
+    }
+
+
+    .unlock-post-card-actions {
+        display: flex;
+        justify-content: space-around;
+        color: #8e8e8e;
+        font-size: 13px;
+        padding-top: 12px;
+        border-top: 1px solid #f5f5f5;
+    }
+
+    .unlock-post-card-actions .action {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .unlock-post-card-actions .action svg {
+        width: 20px;
+        height: 20px;
+        fill: #8e8e8e;
+    }
+
     /* --- Peek Album Styles (偷看相册样式) --- */
     .album-grid {
         display: grid;
@@ -4103,6 +4244,11 @@
         </main>
     </div>
  
+    <!-- Peek Unlock Screen (Social Media) -->
+    <div id="peek-unlock-screen" class="screen">
+        <!-- Content will be dynamically rendered by renderPeekUnlock() -->
+    </div>
+ 
     <div id="peek-confirm-modal" class="modal-overlay">
         <div class="modal-window">
             <h3>要偷看ta的手机吗？</h3>
@@ -6032,6 +6178,102 @@ return Promise.resolve();
                 });
     
                 grid.appendChild(photoEl);
+            });
+        }
+
+        function renderPeekUnlock(data) {
+            const screen = document.getElementById('peek-unlock-screen');
+            if (!screen) return;
+
+            // Handle loading/empty state
+            if (!data) {
+                screen.innerHTML = `
+                    <header class="app-header">
+                        <button class="back-btn" data-target="peek-screen">‹</button>
+                        <div class="title-container"><h1 class="title">...</h1></div>
+                        <button class="action-btn">···</button>
+                    </header>
+                    <main class="content"><p class="placeholder-text">正在生成小号内容...</p></main>
+                `;
+                return;
+            }
+
+            const { nickname, handle, bio, posts } = data;
+            const fixedAvatar = 'https://i.postimg.cc/507KX4jz/chan-62.png';
+
+            // Random numbers for stats
+            const randomFollowers = (Math.random() * 5 + 1).toFixed(1) + 'k';
+            const randomFollowing = Math.floor(Math.random() * 500) + 50;
+
+            let postsHtml = '';
+            if (posts && posts.length > 0) {
+                posts.forEach(post => {
+                    const randomComments = Math.floor(Math.random() * 100);
+                    const randomLikes = Math.floor(Math.random() * 500);
+                    postsHtml += `
+                        <div class="unlock-post-card">
+                            <div class="unlock-post-card-header">
+                                <img src="${fixedAvatar}" alt="Profile Avatar">
+                                <div class="unlock-post-card-author-info">
+                                    <span class="username">${nickname}</span>
+                                    <span class="timestamp">${post.timestamp}</span>
+                                </div>
+                            </div>
+                            <div class="unlock-post-card-content">
+                                ${post.content.replace(/\n/g, '<br>')}
+                            </div>
+                            <div class="unlock-post-card-actions">
+                                <div class="action"><svg viewBox="0 0 24 24"><path d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L16.04,7.15C16.56,7.62 17.24,7.92 18,7.92C19.66,7.92 21,6.58 21,5C21,3.42 19.66,2 18,2C16.34,2 15,3.42 15,5C15,5.24 15.04,5.47 15.09,5.7L7.96,9.85C7.44,9.38 6.76,9.08 6,9.08C4.34,9.08 3,10.42 3,12C3,13.58 4.34,14.92 6,14.92C6.76,14.92 7.44,14.62 7.96,14.15L15.09,18.3C15.04,18.53 15,18.76 15,19C15,20.58 16.34,22 18,22C19.66,22 21,20.58 21,19C21,17.42 19.66,16.08 18,16.08Z"></path></svg> <span>分享</span></div>
+                                <div class="action"><svg viewBox="0 0 24 24"><path d="M20,2H4C2.9,0,2,0.9,2,2v18l4-4h14c1.1,0,2-0.9,2-2V4C22,2.9,21.1,2,20,2z M18,14H6v-2h12V14z M18,11H6V9h12V11z M18,8H6V6h12V8z"></path></svg> <span>${randomComments}</span></div>
+                                <div class="action"><svg viewBox="0 0 24 24"><path d="M12,21.35L10.55,20.03C5.4,15.36,2,12.27,2,8.5C2,5.42,4.42,3,7.5,3c1.74,0,3.41,0.81,4.5,2.09C13.09,3.81,14.76,3,16.5,3C19.58,3,22,5.42,22,8.5c0,3.78-3.4,6.86-8.55,11.54L12,21.35z"></path></svg> <span>${randomLikes}</span></div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            screen.innerHTML = `
+                <header class="app-header">
+                    <button class="back-btn" data-target="peek-screen">‹</button>
+                    <div class="title-container">
+                        <h1 class="title">${nickname}</h1>
+                    </div>
+                    <button class="action-btn" id="refresh-unlock-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"></path></svg></button>
+                </header>
+                <main class="content">
+                    <div class="unlock-profile-header">
+                        <img src="${fixedAvatar}" alt="Profile Avatar" class="unlock-profile-avatar">
+                        <div class="unlock-profile-info">
+                            <h2 class="unlock-profile-username">${nickname}</h2>
+                            <p class="unlock-profile-handle">${handle}</p>
+                        </div>
+                    </div>
+                    <div class="unlock-profile-bio">
+                        <p>${bio.replace(/\n/g, '<br>')}</p>
+                    </div>
+                    <div class="unlock-profile-stats">
+                        <div class="unlock-profile-stat">
+                            <span class="count">${posts.length}</span>
+                            <span class="label">帖子</span>
+                        </div>
+                        <div class="unlock-profile-stat">
+                            <span class="count">${randomFollowers}</span>
+                            <span class="label">粉丝</span>
+                        </div>
+                        <div class="unlock-profile-stat">
+                            <span class="count">${randomFollowing}</span>
+                            <span class="label">关注</span>
+                        </div>
+                    </div>
+                    <div class="unlock-post-feed">
+                        ${postsHtml}
+                    </div>
+                </main>
+            `;
+
+            // Add event listener for the new refresh button
+            screen.querySelector('#refresh-unlock-btn').addEventListener('click', () => {
+                generateAndRenderPeekContent('unlock', { forceRefresh: true });
             });
         }
  
@@ -11507,6 +11749,21 @@ function renderForumPosts(posts) {
                    break;
                 default:
                     prompt += `{"error": "Unknown app type"}`;
+                    break;
+                case 'unlock':
+                    prompt += `
+                    {
+                      "nickname": "角色的微博昵称",
+                      "handle": "@角色的微博ID",
+                      "bio": "角色的个性签名，可以包含换行符\\n",
+                      "posts": [
+                        { "timestamp": "2小时前", "content": "第一条微博正文内容，140字以内。" },
+                        { "timestamp": "昨天", "content": "第二条微博正文内容。" },
+                        { "timestamp": "3天前", "content": "第三条微博正文内容。" }
+                      ]
+                    }
+                    请为 ${char.realName} 生成一个符合其人设的微博小号。你需要生成昵称、ID、个性签名，以及3-4条最近的微博。微博内容要生活化、碎片化，符合小号的风格，并与Ta的人设和我们的聊天上下文高度相关。`;
+                    break;
             }
             return prompt;
         }
@@ -11556,12 +11813,16 @@ function renderForumPosts(posts) {
                         switchScreen('peek-drafts-screen');
                         break;
                    case 'steps':
-                       renderPeekSteps(cachedData);
-                       switchScreen('peek-steps-screen');
+                      renderPeekSteps(cachedData);
+                      switchScreen('peek-steps-screen');
+                      break;
+                   case 'unlock':
+                       renderPeekUnlock(cachedData);
+                       switchScreen('peek-unlock-screen');
                        break;
-                }
-                return; // Stop execution since we used cache
-            }
+               }
+               return; // Stop execution since we used cache
+           }
 
             const char = db.characters.find(c => c.id === currentChatId);
             if (!char) return showToast('无法找到当前角色');
@@ -11610,11 +11871,15 @@ function renderForumPosts(posts) {
                     switchScreen('peek-steps-screen');
                     renderPeekSteps(null); // Render empty state
                     break;
-                default:
-                    showToast('无法打开');
-                    generatingPeekApps.delete(appType); // Unlock if app is invalid
-                    return;
-            }
+               case 'unlock':
+                   switchScreen('peek-unlock-screen');
+                   renderPeekUnlock(null); // Render empty/loading state
+                   break;
+               default:
+                   showToast('无法打开');
+                   generatingPeekApps.delete(appType); // Unlock if app is invalid
+                   return;
+           }
 
             try {
                 const mainChatContext = char.history.slice(-10).map(m => m.content).join('\n');
@@ -11652,6 +11917,7 @@ function renderForumPosts(posts) {
                     case 'browser': isValid = generatedData && Array.isArray(generatedData.history); break;
                     case 'drafts': isValid = generatedData && generatedData.draft; break;
                     case 'steps': isValid = generatedData && generatedData.currentSteps !== undefined; break;
+                    case 'unlock': isValid = generatedData && generatedData.nickname && Array.isArray(generatedData.posts); break;
                     default: isValid = false;
                 }
 
@@ -11680,6 +11946,8 @@ function renderForumPosts(posts) {
                     renderPeekDrafts(generatedData.draft);
                 } else if (appType === 'steps') {
                     renderPeekSteps(generatedData);
+                } else if (appType === 'unlock') {
+                    renderPeekUnlock(generatedData);
                 }
 
             } catch (error) {
@@ -11690,6 +11958,8 @@ function renderForumPosts(posts) {
                 showToast(errorMessage);
                 if (appType === 'album') {
                     document.querySelector('#peek-album-screen .album-grid').innerHTML = `<p class="placeholder-text">内容生成失败，请刷新重试</p>`;
+                } else if (appType === 'unlock') {
+                    document.getElementById('peek-unlock-screen').innerHTML = `<header class="app-header"><button class="back-btn" data-target="peek-screen">‹</button><div class="title-container"><h1 class="title">错误</h1></div><button class="action-btn">···</button></header><main class="content"><p class="placeholder-text">${errorMessage}</p></main>`;
                 } else if (targetContainer) {
                     targetContainer.innerHTML = `<p class="placeholder-text">${errorMessage}</p>`;
                 }
