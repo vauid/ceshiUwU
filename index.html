@@ -3687,11 +3687,18 @@
             <div class="title-container">
                 <h1 class="title">回忆日记</h1>
             </div>
-            <button class="action-btn" id="generate-new-journal-btn" title="生成新日记">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path>
-                </svg>
-            </button>
+            <div class="action-btn-group">
+                <button class="action-btn" id="bind-journal-worldbook-btn" title="绑定世界书">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M17 7h-4v2h4c1.65 0 3 1.35 3 3s-1.35 3-3 3h-4v2h4c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-6 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-2zm-3-4h8v2H8v-2z"></path>
+                    </svg>
+                </button>
+                <button class="action-btn" id="generate-new-journal-btn" title="生成新日记">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path>
+                    </svg>
+                </button>
+            </div>
         </header>
         <main class="content">
             <ul class="list-container" id="journal-list-container">
@@ -3888,6 +3895,17 @@
             </div>
             <button type="submit" class="btn btn-primary">生成</button>
         </form>
+    </div>
+</div>
+
+<!-- Journal World Book Selection Modal -->
+<div id="journal-worldbook-selection-modal" class="modal-overlay">
+    <div class="modal-window">
+        <h3>为日记绑定世界书</h3>
+        <ul id="journal-worldbook-selection-list" class="list-container" style="max-height: 40vh; overflow-y: auto; padding: 0; margin: 15px 0;">
+            <!-- World book items will be rendered here -->
+        </ul>
+        <button class="btn btn-primary" id="save-journal-worldbook-selection-btn" style="margin-top: 20px;">确认</button>
     </div>
 </div>
 
@@ -5017,9 +5035,10 @@ return Promise.resolve();
                     if (charData.customBubbleCss === undefined) charData.customBubbleCss = '';
                     if (charData.useCustomBubbleCss === undefined) charData.useCustomBubbleCss = false;
                     if (!charData.memoryJournals) charData.memoryJournals = []; // Ensure memoryJournals exists
-
-                    return charData;
-                }
+                    if (!charData.journalWorldBookIds) charData.journalWorldBookIds = []; // 新增：确保字段存在
+ 
+                     return charData;
+                 }
                 return null;
             });
 
@@ -5257,8 +5276,44 @@ return Promise.resolve();
             const generateJournalForm = document.getElementById('generate-journal-form');
             const journalListContainer = document.getElementById('journal-list-container');
             const editDetailBtn = document.getElementById('edit-journal-detail-btn');
+            const bindWorldBookBtn = document.getElementById('bind-journal-worldbook-btn');
+            const journalWorldBookModal = document.getElementById('journal-worldbook-selection-modal');
+            const journalWorldBookList = document.getElementById('journal-worldbook-selection-list');
+            const saveJournalWorldBookBtn = document.getElementById('save-journal-worldbook-selection-btn');
 
-            // "生成新日记" 按钮 -> 弹出范围选择模态框
+            // 新增：绑定世界书按钮事件
+            bindWorldBookBtn.addEventListener('click', () => {
+                const character = db.characters.find(c => c.id === currentChatId);
+                if (!character) return;
+
+                journalWorldBookList.innerHTML = ''; // 清空列表
+                if (db.worldBooks.length === 0) {
+                    journalWorldBookList.innerHTML = '<li style="color: #888; text-align: center;">暂无世界书条目</li>';
+                } else {
+                    db.worldBooks.forEach(book => {
+                        const li = document.createElement('li');
+                        li.className = 'world-book-select-item';
+                        const isChecked = (character.journalWorldBookIds || []).includes(book.id);
+                        li.innerHTML = `<input type="checkbox" id="journal-wb-select-${book.id}" value="${book.id}" ${isChecked ? 'checked' : ''}><label for="journal-wb-select-${book.id}">${book.name}</label>`;
+                        journalWorldBookList.appendChild(li);
+                    });
+                }
+                journalWorldBookModal.classList.add('visible');
+            });
+
+            // 新增：保存世界书绑定
+            saveJournalWorldBookBtn.addEventListener('click', async () => {
+                const character = db.characters.find(c => c.id === currentChatId);
+                if (!character) return;
+
+                const selectedIds = Array.from(journalWorldBookList.querySelectorAll('input:checked')).map(input => input.value);
+                character.journalWorldBookIds = selectedIds;
+                await saveData();
+                journalWorldBookModal.classList.remove('visible');
+                showToast('日记绑定的世界书已更新');
+            });
+
+             // "生成新日记" 按钮 -> 弹出范围选择模态框
             generateNewJournalBtn.addEventListener('click', () => {
                 const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
                 const totalMessages = chat ? chat.history.length : 0;
@@ -5459,24 +5514,20 @@ return Promise.resolve();
 
                 const messagesToSummarize = chat.history.slice(startIndex, endIndex);
                 
-                // Create a specific prompt for summarization, asking for JSON output
-                const worldBooksBefore = (chat.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'before')).filter(Boolean).map(wb => wb.content).join('\n');
-                const worldBooksAfter = (chat.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id && wb.position === 'after')).filter(Boolean).map(wb => wb.content).join('\n');
+                // 使用为日记绑定的世界书
+                const journalWorldBooks = (chat.journalWorldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+                const worldBooksContent = journalWorldBooks.map(wb => wb.content).join('\n\n');
 
-                let summaryPrompt = `你是一个日记整理助手。请以角色 "${chat.remarkName || chat.name}" 的第一人称视角，总结以下聊天记录。请专注于重要的内心情绪、事件和细节，以自白式的口吻书写，笔触细腻白描。\n\n`;
+                let summaryPrompt = `你是一个日记整理助手。请以角色 "${chat.remarkName || chat.name}" 的第一人称视角，总结以下聊天记录。请专注于重要的情绪、事件和细节。\n\n`;
                 summaryPrompt += "为了更好地理解角色和背景，请参考以下信息：\n";
                 summaryPrompt += "=====\n";
 
-                if (worldBooksBefore) {
-                    summaryPrompt += `世界观设定 (前置):\n${worldBooksBefore}\n\n`;
+                if (worldBooksContent) {
+                    summaryPrompt += `世界观设定:\n${worldBooksContent}\n\n`;
                 }
 
                 summaryPrompt += `你的角色设定:\n- 角色名: ${chat.realName}\n- 人设: ${chat.persona || "一个友好、乐于助人的伙伴。"}\n\n`;
                 summaryPrompt += `我的角色设定:\n- 我的称呼: ${chat.myName}\n- 我的人设: ${chat.myPersona || "无特定人设。"}\n\n`;
-
-                if (worldBooksAfter) {
-                    summaryPrompt += `世界观设定 (后置):\n${worldBooksAfter}\n\n`;
-                }
                 summaryPrompt += "=====\n";
                 summaryPrompt += `请基于以上所有背景信息，总结以下聊天记录。你的输出必须是一个JSON对象，包含 'title' (一个简洁的标题) 和 'content' (完整的日记正文) 两个字段。聊天记录如下：\n\n---\n${messagesToSummarize.map(m => m.content).join('\n')}\n---`;
 
@@ -7112,9 +7163,14 @@ const plainTextMatch = text.match(/^\[.*?：([\s\S]*)\]$/);
 if (plainTextMatch && plainTextMatch[1]) {
     text = plainTextMatch[1].trim();
 }
+text = text.replace(/\[发送时间:.*?\]/g, '').trim();
 
-text = text.replace(/\[发送时间:.*?\]/g, '').trim(); // <--- 就是加上这一行
-lastMessageText = urlRegex.test(text) ? '[图片]' : text;
+const htmlRegex = /<[a-z][\s\S]*>/i;
+if (htmlRegex.test(text)) {
+    lastMessageText = '[互动]';
+} else {
+    lastMessageText = urlRegex.test(text) ? '[图片]' : text;
+}
                         }
                     } else {
                         const lastEverMsg = chat.history[chat.history.length - 1];
@@ -7172,6 +7228,7 @@ lastMessageText = urlRegex.test(text) ? '[图片]' : text;
                     useCustomBubbleCss: false,
                     customBubbleCss: '',
                     memoryJournals: [],
+                    journalWorldBookIds: [], // 新增
  lastUserMessageTimestamp: null, // 新增：用于记录最后消息时间
                 };
                 db.characters.push(newChar);
@@ -7732,11 +7789,18 @@ bubbleElement.textContent = userText.replace(/\[发送时间:.*?\]/g, '').trim()
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
                 let displayedContent = content;
-const plainTextMatch = content.match(/^\[.*?：([\s\S]*)\]$/);
-if (plainTextMatch && plainTextMatch[1]) {
-    displayedContent = plainTextMatch[1].trim();
-}
-bubbleElement.textContent = displayedContent.replace(/\[发送时间:.*?\]/g, '').trim();
+                const plainTextMatch = content.match(/^\[.*?：([\s\S]*)\]$/);
+                if (plainTextMatch && plainTextMatch[1]) {
+                    displayedContent = plainTextMatch[1].trim();
+                }
+                displayedContent = displayedContent.replace(/\[发送时间:.*?\]/g, '').trim();
+
+                const htmlRegex = /<[a-z][\s\S]*>/i;
+                if (htmlRegex.test(displayedContent)) {
+                    bubbleElement.innerHTML = displayedContent;
+                } else {
+                    bubbleElement.textContent = displayedContent;
+                }
                 if (!chat.useCustomBubbleCss) {
                     bubbleElement.style.backgroundColor = bubbleTheme.bg;
                     bubbleElement.style.color = bubbleTheme.text;
