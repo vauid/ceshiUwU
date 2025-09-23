@@ -4665,7 +4665,7 @@ border-top: none;
 <div id="mypersona-presets-modal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);justify-content:center;align-items:center;z-index:9999;"><div class="modal-window" style="max-width:520px;background:var(--panel-bg,#fff);padding:14px;border-radius:10px;box-shadow:0 12px 36px rgba(10,10,20,0.12);"><h3 style="margin:0 0 10px 0;font-size:16px;">管理我的人设预设</h3><div id="mypersona-presets-list" style="max-height:340px; overflow:auto; margin-bottom:12px;"></div><div style="display:flex;gap:8px;justify-content:flex-end;"><button type="button" id="mypersona-close-modal" class="btn btn-primary" style="padding:8px 12px;border-radius:8px;">关闭</button></div></div></div>
 <div id="global-css-presets-modal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);justify-content:center;align-items:center;z-index:9999;"><div class="modal-window" style="max-width:520px;background:var(--panel-bg,#fff);padding:14px;border-radius:10px;box-shadow:0 12px 36px rgba(10,10,20,0.12);"><h3 style="margin:0 0 10px 0;font-size:16px;">管理全局CSS预设</h3><div id="global-css-presets-list" style="max-height:340px; overflow:auto; margin-bottom:12px;"></div><div style="display:flex;gap:8px;justify-content:flex-end;"><button type="button" id="global-css-close-modal" class="btn btn-primary" style="padding:8px 12px;border-radius:8px;">关闭</button></div></div></div>
 <input type="file" id="import-data-input" accept=".ee" style="display: none;">
-<input type="file" id="character-card-input" accept=".json,.png" style="display: none;">
+<input type="file" id="character-card-input" accept="image/png,application/json" style="display: none;">
 
 <script>
     async function updateBatteryStatus() {
@@ -9851,7 +9851,7 @@ return `${seconds}秒`;
 
            const allWorldBookContent = worldBooksBefore + '\n' + worldBooksAfter;
            if (allWorldBookContent.includes('<orange>')) {
-               outputFormats += `\n     j) HTML模块: {HTML内容}。这是一种特殊的、用于展示丰富样式的小卡片消息，你可以用它来创造更有趣的互动。`;
+               outputFormats += `\n     j) HTML模块: {HTML内容}。这是一种特殊的、用于展示丰富样式的小卡片消息，格式必须为纯HTML+行内CSS，你可以用它来创造更有趣的互动。`;
            }
 
             prompt += `11. 你的输出格式必须严格遵循以下几种之一，可以组合使用：${outputFormats}\n`;
@@ -10055,8 +10055,17 @@ return `${seconds}秒`;
             if (fullResponse) {
                 // ▼▼▼▼▼▼▼▼▼▼ 核心修改从这里开始 ▼▼▼▼▼▼▼▼▼▼
 
-                // 从完整的回复中，拆分出所有消息（包括普通文本和HTML小剧场），并过滤掉空消息
-                const messages = getMixedContent(fullResponse).filter(item => item.content.trim() !== '');
+                const trimmedResponse = fullResponse.trim();
+                let messages;
+
+                // 新增：判断回复是否可能是一个完整的HTML块
+                if (trimmedResponse.startsWith('<') && trimmedResponse.endsWith('>')) {
+                    // 如果是，则将其视为单个HTML消息，避免被错误切分
+                    messages = [{ type: 'html', content: trimmedResponse }];
+                } else {
+                    // 否则，使用原有的逻辑来处理可能混合了多种格式的文本
+                    messages = getMixedContent(fullResponse).filter(item => item.content.trim() !== '');
+                }
 
                 let firstMessageProcessed = false; // 用于标记是否是第一条消息
 
@@ -11008,9 +11017,14 @@ return `${seconds}秒`;
                 if (!character) return;
                 if (confirm(`你确定要清空与“${character.remarkName}”的所有聊天记录吗？这个操作是不可恢复的！`)) {
                     character.history = [];
+                    character.status = '在线'; // 重置状态
                     await saveData();
                     renderMessages(false, true);
                     renderChatList();
+                    // 更新聊天室顶部的状态显示
+                    if (currentChatId === character.id) {
+                        document.getElementById('chat-room-status-text').textContent = '在线';
+                    }
                     settingsSidebar.classList.remove('open');
                     showToast('聊天记录已清空');
                 }
