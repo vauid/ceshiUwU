@@ -109,8 +109,8 @@
             font-weight: bold;
             color: var(--primary-color);
             cursor: pointer;
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -3472,6 +3472,22 @@
     line-height: 1.6;
     font-style: italic;
 }
+/* --- 世界书分类样式 --- */
+.world-book-category-title {
+padding: 10px 20px 5px 20px;
+font-size: 16px;
+font-weight: 600;
+color: var(--secondary-color);
+background-color: #fff8fa;
+border-bottom: 1px solid #fce4ec;
+border-top: 1px solid #fce4ec;
+margin-top: 10px;
+}
+
+#world-book-list-container > .world-book-category-title:first-child {
+margin-top: 0;
+border-top: none;
+}
     </style>
     <style id="global-css-style"></style>
 </head>
@@ -3650,6 +3666,10 @@
                 <div class="form-group">
                     <label for="world-book-name">条目名称</label>
                     <input type="text" id="world-book-name" placeholder="例如：世界观背景、魔法体系" required>
+                </div>
+                <div class="form-group">
+                    <label for="world-book-category">条目分类</label>
+                    <input type="text" id="world-book-category" placeholder="例如：人物、地点、组织（可选）">
                 </div>
                 <div class="form-group">
                     <label for="world-book-content">条目内容</label>
@@ -6011,7 +6031,7 @@ return Promise.resolve();
                 const journalWorldBooks = (chat.journalWorldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
                 const worldBooksContent = journalWorldBooks.map(wb => wb.content).join('\n\n');
 
-                let summaryPrompt = `你是一个日记整理助手。请以角色 "${chat.remarkName || chat.name}" 的第一人称视角，总结以下聊天记录。请专注于重要的情绪、事件和细节，语言内省而克制，带有诗意与隐喻感，用冷静的笔触将对话片段凝练为思绪流动与寓言化的自白。\n\n`;
+                let summaryPrompt = `你是一个日记整理助手。请以角色 "${chat.remarkName || chat.name}" 的第一人称视角，总结以下聊天记录。请专注于重要的情绪、事件和细节。\n\n`;
                 summaryPrompt += "为了更好地理解角色和背景，请参考以下信息：\n";
                 summaryPrompt += "=====\n";
 
@@ -10004,6 +10024,7 @@ return `${seconds}秒`;
                 e.preventDefault();
                 const name = worldBookNameInput.value.trim();
                 const content = worldBookContentInput.value.trim();
+                const category = document.getElementById('world-book-category').value.trim();
                 const position = document.querySelector('input[name="world-book-position"]:checked').value;
                 if (!name || !content) return showToast('名称和内容不能为空');
                 if (currentEditingWorldBookId) {
@@ -10012,9 +10033,10 @@ return `${seconds}秒`;
                         book.name = name;
                         book.content = content;
                         book.position = position;
+                        book.category = category;
                     }
                 } else {
-                    db.worldBooks.push({id: `wb_${Date.now()}`, name, content, position});
+                    db.worldBooks.push({id: `wb_${Date.now()}`, name, content, position, category});
                 }
                 await saveData();
                 showToast('世界书条目已保存');
@@ -10022,6 +10044,12 @@ return `${seconds}秒`;
                 switchScreen('world-book-screen');
             });
             worldBookListContainer.addEventListener('click', e => {
+                const header = e.target.closest('.collapsible-header');
+                if (header) {
+                    header.parentElement.classList.toggle('open');
+                    return;
+                }
+                
                 const item = e.target.closest('.world-book-item');
                 if (item) {
                     const book = db.worldBooks.find(wb => wb.id === item.dataset.id);
@@ -10030,6 +10058,7 @@ return `${seconds}秒`;
                         worldBookIdInput.value = book.id;
                         worldBookNameInput.value = book.name;
                         worldBookContentInput.value = book.content;
+                        document.getElementById('world-book-category').value = book.category || '';
                         document.querySelector(`input[name="world-book-position"][value="${book.position}"]`).checked = true;
                         switchScreen('edit-world-book-screen');
                     }
@@ -10067,46 +10096,75 @@ return `${seconds}秒`;
         }
 
         function renderWorldBookList() {
-            worldBookListContainer.innerHTML = '';
+            worldBookListContainer.innerHTML = ''; // 清空容器
             noWorldBooksPlaceholder.style.display = db.worldBooks.length === 0 ? 'block' : 'none';
-            db.worldBooks.forEach(book => {
-                const li = document.createElement('li');
-                li.className = 'list-item world-book-item';
-                li.dataset.id = book.id;
-                li.innerHTML = `<div class="item-details" style="padding-left: 20px;"><div class="item-name">${book.name}</div><div class="item-preview">${book.content}</div></div>`;
-                const delBtn = document.createElement('button');
-               delBtn.className = 'action-btn';
-               delBtn.style.position = 'absolute';
-               delBtn.style.right = '8px';
-               delBtn.style.top = '50%';
-               delBtn.style.transform = 'translateY(-50%)';
-               delBtn.style.padding = '6px';
-               delBtn.style.border = 'none';
-               delBtn.style.background = 'transparent';
-               delBtn.title = '删除世界书';
-               const delImg = document.createElement('img');
-               delImg.src = 'https://i.postimg.cc/hGW6B0Wf/icons8-50.png';
-               delImg.alt = '删除';
-               delImg.style.width = '22px';
-               delImg.style.height = '22px';
-               delImg.style.objectFit = 'contain';
-               delBtn.appendChild(delImg);
-               delBtn.addEventListener('click', async (ev) => {
-                   ev.stopPropagation();
-                   if (!confirm('确定要删除这个世界书条目吗？')) return;
-                   try {
-                       db.worldBooks = db.worldBooks.filter(wb => wb.id !== book.id);
-                       await saveData();
-                       renderWorldBookList();
-                       showToast && showToast('世界书已删除');
-                   } catch (err) {
-                       console.error('删除世界书出错', err);
-                       alert('删除失败，请查看控制台');
-                   }
-               });
-               li.style.position = 'relative';
-               li.appendChild(delBtn);
-                worldBookListContainer.appendChild(li);
+
+            if (db.worldBooks.length === 0) return;
+
+            const groupedBooks = db.worldBooks.reduce((acc, book) => {
+                const category = book.category || '未分类';
+                if (!acc[category]) {
+                    acc[category] = [];
+                }
+                acc[category].push(book);
+                return acc;
+            }, {});
+
+            const sortedCategories = Object.keys(groupedBooks).sort((a, b) => {
+                if (a === '未分类') return 1;
+                if (b === '未分类') return -1;
+                return a.localeCompare(b);
+            });
+
+            sortedCategories.forEach(category => {
+                const section = document.createElement('div');
+                section.className = 'collapsible-section'; // Using existing style
+
+                const header = document.createElement('div');
+                header.className = 'collapsible-header';
+                header.innerHTML = `<h4>${category}</h4><span class="collapsible-arrow">▼</span>`;
+                
+                const content = document.createElement('div');
+                content.className = 'collapsible-content';
+
+                const categoryList = document.createElement('ul');
+                categoryList.className = 'list-container';
+                categoryList.style.padding = '0'; // Remove default ul padding
+
+                groupedBooks[category].forEach(book => {
+                    const li = document.createElement('li');
+                    li.className = 'list-item world-book-item';
+                    li.dataset.id = book.id;
+                    li.innerHTML = `
+                        <div class="item-details" style="padding-left: 0;">
+                            <div class="item-name">${book.name}</div>
+                            <div class="item-preview">${book.content}</div>
+                        </div>
+                    `;
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'action-btn';
+                    delBtn.style.cssText = 'position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 6px; border: none; background: transparent;';
+                    delBtn.title = '删除世界书';
+                    delBtn.innerHTML = '<img src="https://i.postimg.cc/hGW6B0Wf/icons8-50.png" alt="删除" style="width: 22px; height: 22px; object-fit: contain;">';
+                    
+                    delBtn.addEventListener('click', async (ev) => {
+                        ev.stopPropagation();
+                        if (!confirm('确定要删除这个世界书条目吗？')) return;
+                        db.worldBooks = db.worldBooks.filter(wb => wb.id !== book.id);
+                        await saveData();
+                        renderWorldBookList();
+                        showToast && showToast('世界书已删除');
+                    });
+
+                    li.style.position = 'relative';
+                    li.appendChild(delBtn);
+                    categoryList.appendChild(li);
+                });
+
+                content.appendChild(categoryList);
+                section.appendChild(header);
+                section.appendChild(content);
+                worldBookListContainer.appendChild(section);
             });
         }
 
