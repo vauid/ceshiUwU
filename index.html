@@ -9079,7 +9079,7 @@ return `${seconds}秒`;
 
             // 最终结果数组
             const results = [];
-            const regex = /<(orange|div)(?:\s+char="([^"]*)")?>([\s\S]*?)<\/\1>|(\[[\s\S]*?\])/g;
+            const regex = /<(orange|div)(?:[^>]*?\s+char="([^"]*)"[^>]*?|[^>]*?)>([\s\S]*?)<\/\1>|(\[[\s\S]*?\])/g;
 
             let lastIndex = 0;
             let match;
