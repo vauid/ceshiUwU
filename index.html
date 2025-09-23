@@ -10,6 +10,7 @@
     <link rel="apple-touch-icon" href="https://i.postimg.cc/nzP9sgxr/chan-125.png">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://unpkg.com/dompurify@2.3.8/dist/purify.min.js"></script>
     <link rel="manifest" href="manifest.json">
 
     <style>
@@ -1535,14 +1536,6 @@
         }
 
         /* --- 未读消息红点样式 --- */
-        .item-meta {
-    /* 这个容器现在只包含时间，不再需要flex布局 */
-    /* display: flex; */
-    /* flex-direction: column; */
-    /* align-items: flex-end; */
-    /* gap: 8px; */
-}
-
 .unread-badge {
     position: absolute; /* 关键：使用绝对定位 */
     top: 60%;          /* 距离顶部12px */
@@ -8827,22 +8820,18 @@ if (newTextRaw) {
             } else if (textMatch) {
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
-
-let userText = textMatch[1].trim().replace(/\[发送时间:.*?\]/g, '').trim();
-const htmlRegex = /<[a-z][\s\S]*>/i;
-if (htmlRegex.test(userText)) {
-    bubbleElement.innerHTML = userText;
-} else {
-    bubbleElement.textContent = userText;
-}
+                let userText = textMatch[1].trim().replace(/\[发送时间:.*?\]/g, '').trim();
+                // 使用 DOMPurify 清理和渲染 HTML
+                bubbleElement.innerHTML = DOMPurify.sanitize(userText);
                 if (!chat.useCustomBubbleCss) {
                     bubbleElement.style.backgroundColor = bubbleTheme.bg;
                     bubbleElement.style.color = bubbleTheme.text;
                 }
-            }else if(message && Array.isArray( message.parts) && message.parts[0].type === 'html'){
+            } else if (message && Array.isArray(message.parts) && message.parts[0].type === 'html') {
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
-                bubbleElement.innerHTML = message.parts[0].text;
+                // 使用 DOMPurify 清理和渲染 HTML
+                bubbleElement.innerHTML = DOMPurify.sanitize(message.parts[0].text);
             } else {
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
@@ -8853,12 +8842,9 @@ if (htmlRegex.test(userText)) {
                 }
                 displayedContent = displayedContent.replace(/\[发送时间:.*?\]/g, '').trim();
 
-                const htmlRegex = /<[a-z][\s\S]*>/i;
-                if (htmlRegex.test(displayedContent)) {
-                    bubbleElement.innerHTML = displayedContent;
-                } else {
-                    bubbleElement.textContent = displayedContent;
-                }
+                // 默认使用 DOMPurify 清理和渲染所有内容
+                bubbleElement.innerHTML = DOMPurify.sanitize(displayedContent);
+
                 if (!chat.useCustomBubbleCss) {
                     bubbleElement.style.backgroundColor = bubbleTheme.bg;
                     bubbleElement.style.color = bubbleTheme.text;
@@ -9414,75 +9400,105 @@ return `${seconds}秒`;
         }
 
         function getMixedContent(responseData) {
-            // const mixedContent = [];
-            //
-            // // 提取消息及其位置
-            // const messageRegex = new RegExp(regex, "g");
-            // let messageMatch;
-            // while ((messageMatch = messageRegex.exec(responseData)) !== null) {
-            //     mixedContent.push({
-            //         type: 'text',
-            //         content: messageMatch[0],
-            //         index: messageMatch.index,
-            //     });
-            // }
-            //
-            // // 提取HTML及其位置
-            // const htmlRegex = /<orange(?:\s+char=["']([^"']*?)["'])?\s*>([\s\S]*?)<\/orange>/g
-            // let htmlMatch;
-            // while ((htmlMatch = htmlRegex.exec(responseData)) !== null) {
-            //     mixedContent.push({
-            //         type: 'html',
-            //         content: htmlMatch[2].trim(), // HTML内容在第二个捕获组
-            //         char: htmlMatch[1] || '', // char属性值，如果没有则为空字符串
-            //         index: htmlMatch.index,
-            //     });
-            // }
-            //
-            // // 按出现顺序排序
-            // mixedContent.sort((a, b) => a.index - b.index);
-            //
-            // return mixedContent;
-
-            // 最终结果数组
             const results = [];
-            const regex = /<(orange|div)(?:[^>]*?\s+char="([^"]*)"[^>]*?|[^>]*?)>([\s\S]*?)<\/\1>|(\[[\s\S]*?\])/g;
+            let i = 0;
 
-            let lastIndex = 0;
-            let match;
+            while (i < responseData.length) {
+                const nextTagStart = responseData.indexOf('<', i);
+                const nextBracketStart = responseData.indexOf('[', i);
 
-            while ((match = regex.exec(responseData)) !== null) {
-                // 捕获两个匹配项之间的普通文本
-                if (match.index > lastIndex) {
-                    const textPart = responseData.substring(lastIndex, match.index).trim();
-                    if (textPart) {
-                        results.push({ type: 'text', content: `[unknown的消息：${textPart}]` });
+                // Find the start of the next special block
+                let firstSpecialIndex = -1;
+                if (nextTagStart !== -1 && nextBracketStart !== -1) {
+                    firstSpecialIndex = Math.min(nextTagStart, nextBracketStart);
+                } else {
+                    firstSpecialIndex = Math.max(nextTagStart, nextBracketStart);
+                }
+
+                // If no special blocks left, the rest is plain text
+                if (firstSpecialIndex === -1) {
+                    const text = responseData.substring(i).trim();
+                    if (text) results.push({ type: 'text', content: `[unknown的消息：${text}]` });
+                    break;
+                }
+
+                // If there's plain text before the special block, add it
+                if (firstSpecialIndex > i) {
+                    const text = responseData.substring(i, firstSpecialIndex).trim();
+                    if (text) results.push({ type: 'text', content: `[unknown的消息：${text}]` });
+                }
+
+                i = firstSpecialIndex;
+
+                // Process the block
+                if (responseData[i] === '<') {
+                    // Potential HTML block
+                    const tagMatch = responseData.substring(i).match(/^<([a-zA-Z0-9]+)/);
+                    if (tagMatch) {
+                        const tagName = tagMatch[1];
+                        let openCount = 0;
+                        let searchIndex = i;
+                        let blockEnd = -1;
+
+                        // Find the end of the outermost tag
+                        while (searchIndex < responseData.length) {
+                            const openTagPos = responseData.indexOf('<' + tagName, searchIndex);
+                            const closeTagPos = responseData.indexOf('</' + tagName, searchIndex);
+
+                            if (openTagPos !== -1 && (closeTagPos === -1 || openTagPos < closeTagPos)) {
+                                openCount++;
+                                searchIndex = openTagPos + 1;
+                            } else if (closeTagPos !== -1) {
+                                openCount--;
+                                searchIndex = closeTagPos + 1;
+                                if (openCount === 0) {
+                                    blockEnd = closeTagPos + `</${tagName}>`.length;
+                                    break;
+                                }
+                            } else {
+                                break; // Malformed, no closing tag
+                            }
+                        }
+
+                        if (blockEnd !== -1) {
+                            const htmlBlock = responseData.substring(i, blockEnd);
+                            const charMatch = htmlBlock.match(/<[a-z][a-z0-9]*\s+char="([^"]*)"/i);
+                            const char = charMatch ? charMatch[1] : null;
+                            results.push({ type: 'html', char: char, content: htmlBlock });
+                            i = blockEnd;
+                            continue;
+                        }
+                    }
+                }
+                
+                if (responseData[i] === '[') {
+                    // Potential [...] block
+                    const endBracket = responseData.indexOf(']', i);
+                    if (endBracket !== -1) {
+                        const text = responseData.substring(i, endBracket + 1);
+                        results.push({ type: 'text', content: text });
+                        i = endBracket + 1;
+                        continue;
                     }
                 }
 
-                if (match[3] !== undefined) { // Matched <orange> or <div> content
-                    results.push({
-                        type: 'html',
-                        char: match[2] || null,
-                        content: match[3].trim()
-                    });
-                } else if (match[4]) { // Matched [...]
-                    results.push({
-                        type: 'text',
-                        content: match[4]
-                    });
+                // If we got here, it was a false alarm (e.g., a lone '<' or '[').
+                // Treat it as plain text and move on.
+                const nextSpecial1 = responseData.indexOf('<', i + 1);
+                const nextSpecial2 = responseData.indexOf('[', i + 1);
+                let endOfText = -1;
+                if (nextSpecial1 !== -1 && nextSpecial2 !== -1) {
+                    endOfText = Math.min(nextSpecial1, nextSpecial2);
+                } else {
+                    endOfText = Math.max(nextSpecial1, nextSpecial2);
                 }
-                lastIndex = regex.lastIndex;
-            }
-
-            // 捕获最后一个匹配项之后的剩余文本
-            if (lastIndex < responseData.length) {
-                const textPart = responseData.substring(lastIndex).trim();
-                if (textPart) {
-                     results.push({ type: 'text', content: `[unknown的消息：${textPart}]` });
+                if (endOfText === -1) {
+                    endOfText = responseData.length;
                 }
+                const text = responseData.substring(i, endOfText).trim();
+                if (text) results.push({ type: 'text', content: `[unknown的消息：${text}]` });
+                i = endOfText;
             }
-
             return results;
         }
 
@@ -9549,7 +9565,7 @@ return `${seconds}秒`;
 
            const allWorldBookContent = worldBooksBefore + '\n' + worldBooksAfter;
            if (allWorldBookContent.includes('<orange>')) {
-               outputFormats += `\n     j) HTML模块: <orange>{HTML内容}</orange>。这是一种特殊的、用于展示丰富样式的小卡片消息，你可以用它来创造更有趣的互动。`;
+               outputFormats += `\n     j) HTML模块: {HTML内容}。这是一种特殊的、用于展示丰富样式的小卡片消息，你可以用它来创造更有趣的互动。`;
            }
 
             prompt += `11. 你的输出格式必须严格遵循以下几种之一，可以组合使用：${outputFormats}\n`;
