@@ -12771,6 +12771,18 @@ function renderForumPosts(posts) {
 
             let prompt = `你正在模拟一个名为 ${char.realName} 的角色的手机内部信息。`;
             prompt += `该角色的核心人设是：${char.persona}。\n`;
+
+            // 新增：获取并注入世界书和用户人设
+            const associatedWorldBooks = (char.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+            if (associatedWorldBooks.length > 0) {
+                const worldBookContext = associatedWorldBooks.map(wb => `设定名: ${wb.name}\n内容: ${wb.content}`).join('\n\n');
+                prompt += `\n为了更好地理解背景，请参考以下世界观设定：\n---\n${worldBookContext}\n---\n`;
+            }
+            if (char.myPersona) {
+                prompt += `\n作为参考，我（用户）的人设是：${char.myPersona}\n`;
+            }
+            // 新增结束
+
             prompt += `最近，我（称呼为 ${char.myName}）和 ${char.realName} 的对话如下（这是你们关系和当前状态的核心参考）：\n---\n${mainChatContext}\n---\n`;
             prompt += `现在，我正在偷看Ta手机上的“${appName}”。请你基于Ta的人设和我们最近的聊天内容，生成符合该应用场景的、高度相关且富有沉浸感的内容。\n`;
             prompt += `你的输出必须是一个JSON对象，且只包含JSON内容，不要有任何额外的解释或标记。根据应用类型，JSON结构如下：\n`;
