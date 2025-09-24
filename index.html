@@ -9784,7 +9784,7 @@ return `${seconds}秒`;
                     transferStatus: 'pending'
                 };
                 chat.history.push(message);
-                addMessageBubble(message);
+                addMessageBubble(message, currentChatId, currentChatType);
             } else { // Group chat
                 currentGroupAction.recipients.forEach(recipientId => {
                     const recipient = chat.members.find(m => m.id === recipientId);
@@ -9799,7 +9799,7 @@ return `${seconds}秒`;
                             senderId: 'user_me'
                         };
                         chat.history.push(message);
-                        addMessageBubble(message);
+                        addMessageBubble(message, currentChatId, currentChatType);
                     }
                 });
             }
@@ -9823,7 +9823,7 @@ return `${seconds}秒`;
                     giftStatus: 'sent'
                 };
                 chat.history.push(message);
-                addMessageBubble(message);
+                addMessageBubble(message, currentChatId, currentChatType);
             } else { // Group chat
                 currentGroupAction.recipients.forEach(recipientId => {
                     const recipient = chat.members.find(m => m.id === recipientId);
@@ -9838,7 +9838,7 @@ return `${seconds}秒`;
                             senderId: 'user_me'
                         };
                         chat.history.push(message);
-                        addMessageBubble(message);
+                        addMessageBubble(message, currentChatId, currentChatType);
                     }
                 });
             }
@@ -9887,7 +9887,7 @@ return `${seconds}秒`;
             }
 
             chat.history.push(visualMessage, contextMessage);
-            addMessageBubble(visualMessage);
+            addMessageBubble(visualMessage, currentChatId, currentChatType);
             await saveData();
             renderChatList();
             timeSkipModal.classList.remove('visible');
