@@ -9208,20 +9208,54 @@ if (newTextRaw) {
                 } else {
                     // 如果是AI发的表情包，我们需要处理路径
                     // 原始路径，例如："害羞vHLfrV3K/1.jpg"
+                            // --- 这是实现您新需求的修改 ---
+
+                    // 1. 检查当前角色的世界书是否包含 'catbox' 关键词
+                    let useCatbox = false;
+                    if (chat && chat.worldBookIds && chat.worldBookIds.length > 0) {
+                        const worldBookContent = chat.worldBookIds
+                            .map(id => db.worldBooks.find(wb => wb.id === id))
+                            .filter(Boolean)
+                            .map(wb => wb.content)
+                            .join(' ');
+
+                        if (worldBookContent.toLowerCase().includes('catbox')) {
+                            useCatbox = true;
+                        }
+                    }
+
+                    // 2. 根据检查结果，选择图床前缀
+                    const imageHost = useCatbox ? 'https://files.catbox.moe/' : 'https://i.postimg.cc/';
+
+                   // 3. 从AI回复中获取原始路径
                     const rawPath = receivedStickerMatch[1].trim();
+        
+                                        // 4. 关键: 根据图床选择不同的路径处理方式
+                    let finalPath;
+                    if (useCatbox) {
+                        // 对于 Catbox，AI返回 "情绪+文件名" (例如 "焦虑2a9wte.jpeg")
+                        // 我们需要用正则从中提取出真正的文件名 (例如 "2a9wte.jpeg")
+                        const catboxFileRegex = /[a-z0-9]+\.(jpeg|png|gif|jpg)$/i;
+                        const pathMatch = rawPath.match(catboxFileRegex);
+                        
+                        if (pathMatch) {
+                            finalPath = pathMatch[0]; // 使用匹配到的文件名
+                        } else {
+                            finalPath = rawPath; // 作为备用方案，如果正则没匹配上
+                        }
+                    } else {
+                        // 对于 postimg 等其他图床，保留原有的提取逻辑
+                        const pathExtractionRegex = /[a-zA-Z0-9]+\/.*$/;
+                        const extractedPathMatch = rawPath.match(pathExtractionRegex);
+                        finalPath = extractedPathMatch ? extractedPathMatch[0] : rawPath;
+                    }
 
-                    // 用一个新的正则表达式来提取需要的部分，例如："vHLfrV3K/1.jpg"
-                    const pathExtractionRegex = /[a-zA-Z0-9]+\/.*$/;
-                    const extractedPathMatch = rawPath.match(pathExtractionRegex);
-
-                    // 如果正则成功匹配到了，就使用匹配到的结果
-                    const finalPath = extractedPathMatch ? extractedPathMatch[0] : rawPath;
-
-                    // 拼接成最终的图片URL
-                    stickerSrc = `https://i.postimg.cc/${finalPath}`;
+                    // 5. 拼接最终URL
+                    stickerSrc = `${imageHost}${finalPath}`;
                 }
 
                 bubbleElement.innerHTML = `<img src="${stickerSrc}" alt="表情包">`;
+
             } else if (privateGiftMatch || groupGiftMatch) {
                 const match = privateGiftMatch || groupGiftMatch;
                 bubbleElement = document.createElement('div');
