@@ -9729,6 +9729,8 @@ return `${seconds}秒`;
 
         async function sendMyVoiceMessage(text) {
             if (!text) return;
+            sendVoiceModal.classList.remove('visible');
+            await new Promise(resolve => setTimeout(resolve, 100));
             const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
             const myName = (currentChatType === 'private') ? chat.myName : chat.me.nickname;
             const content = `[${myName}的语音：${text}]`;
@@ -9746,11 +9748,12 @@ return `${seconds}秒`;
             addMessageBubble(message, currentChatId, currentChatType);
             await saveData();
             renderChatList();
-            sendVoiceModal.classList.remove('visible');
         }
 
         async function sendMyPhotoVideo(text) {
             if (!text) return;
+            sendPvModal.classList.remove('visible');
+            await new Promise(resolve => setTimeout(resolve, 100));
             const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
             const myName = (currentChatType === 'private') ? chat.myName : chat.me.nickname;
             const content = `[${myName}发来的照片\/视频：${text}]`;
@@ -9768,10 +9771,11 @@ return `${seconds}秒`;
             addMessageBubble(message, currentChatId, currentChatType);
             await saveData();
             renderChatList();
-            sendPvModal.classList.remove('visible');
         }
 
         async function sendMyTransfer(amount, remark) {
+            sendTransferModal.classList.remove('visible');
+            await new Promise(resolve => setTimeout(resolve, 100));
             const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
             if (currentChatType === 'private') {
                 const content = `[${chat.myName}给你转账：${amount}元；备注：${remark}]`;
@@ -9805,11 +9809,12 @@ return `${seconds}秒`;
             }
             await saveData();
             renderChatList();
-            sendTransferModal.classList.remove('visible');
         }
 
         async function sendMyGift(description) {
             if (!description) return;
+            sendGiftModal.classList.remove('visible');
+            await new Promise(resolve => setTimeout(resolve, 100));
             const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
 
             if (currentChatType === 'private') {
@@ -9844,7 +9849,6 @@ return `${seconds}秒`;
             }
             await saveData();
             renderChatList();
-            sendGiftModal.classList.remove('visible');
         }
 
         // --- NEW: Time Skip System ---
@@ -9864,6 +9868,8 @@ return `${seconds}秒`;
 
         async function sendTimeSkipMessage(text) {
             if (!text) return;
+            timeSkipModal.classList.remove('visible');
+            await new Promise(resolve => setTimeout(resolve, 100));
             const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
             if (!chat) return;
 
@@ -9890,7 +9896,6 @@ return `${seconds}秒`;
             addMessageBubble(visualMessage, currentChatId, currentChatType);
             await saveData();
             renderChatList();
-            timeSkipModal.classList.remove('visible');
         }
 
         // --- NEW: Chat Expansion Panel ---
