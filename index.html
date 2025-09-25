@@ -5290,37 +5290,41 @@ border-top: none;
             async saveChatMessages(chatId, chatType, messages) {
                 const startTime = Date.now();
                 try {
-                    // 清除该聊天的所有现有分块
-                    await this.db.messageChunks.where('chatId').equals(chatId).and(chunk => chunk.chatType === chatType).delete();
+                    // 使用事务来保证删除和写入的原子性
+                    await this.db.transaction('rw', this.db.messageChunks, async () => {
+                        // 1. 在事务中删除旧分块
+                        await this.db.messageChunks.where('chatId').equals(chatId).and(chunk => chunk.chatType === chatType).delete();
 
-                    // 将消息分块存储
-                    const chunks = [];
-                    for (let i = 0; i < messages.length; i += this.chunkSize) {
-                        const chunkMessages = messages.slice(i, i + this.chunkSize);
-                        const chunkId = `${chatId}_${chatType}_${Math.floor(i / this.chunkSize)}`;
+                        // 2. 在事务中准备并写入新分块
+                        const chunks = [];
+                        for (let i = 0; i < messages.length; i += this.chunkSize) {
+                            const chunkMessages = messages.slice(i, i + this.chunkSize);
+                            const chunkId = `${chatId}_${chatType}_${Math.floor(i / this.chunkSize)}`;
 
-                        chunks.push({
-                            id: chunkId,
-                            chatId: chatId,
-                            chatType: chatType,
-                            chunkIndex: Math.floor(i / this.chunkSize),
-                            messages: chunkMessages,
-                            timestamp: Date.now()
-                        });
-                    }
+                            chunks.push({
+                                id: chunkId,
+                                chatId: chatId,
+                                chatType: chatType,
+                                chunkIndex: Math.floor(i / this.chunkSize),
+                                messages: chunkMessages,
+                                timestamp: Date.now()
+                            });
+                        }
 
-                    if (chunks.length > 0) {
-                        await this.db.messageChunks.bulkPut(chunks);
-                    }
+                        if (chunks.length > 0) {
+                            await this.db.messageChunks.bulkPut(chunks);
+                        }
+                    });
 
-                    // 更新缓存
+                    // 事务成功后更新缓存
                     const cacheKey = `messages_${chatId}_${chatType}`;
                     this.updateCache(cacheKey, messages);
 
-                    console.log(`消息已分块保存: ${chatId} (${chunks.length}个分块)`);
+                    console.log(`消息已通过事务安全保存: ${chatId}`);
                     return true;
                 } catch (error) {
-                    console.error('保存消息失败:', error);
+                    console.error('保存消息事务失败:', error);
+                    // 发生错误时，事务会自动回滚，旧数据不会丢失
                     return false;
                 }
             }
