@@ -692,6 +692,41 @@
             text-align: center;
         }
 
+        /* --- 导演指令气泡新样式 --- */
+        .director-command-bubble {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .director-command-timestamp {
+            background-color: #e0e0e0;
+            color: #757575;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .director-command-timestamp:hover {
+            background-color: #d1d1d1;
+        }
+
+        .director-command-content {
+            background-color: #f5f5f5;
+            color: #555;
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            margin-top: 5px;
+            max-width: 80%;
+            text-align: left;
+            line-height: 1.5;
+        }
+
         /* --- 新增：撤回消息样式 --- */
         .withdrawn-message {
             color: #999;
@@ -3716,6 +3751,54 @@ border-top: none;
     padding: 5px; /* 调整内边距以适应新尺寸 */
 }
 
+/* --- 导演模式指示器样式 --- */
+#director-mode-indicator {
+    display: none; /* 默认隐藏 */
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 6px;
+    width: 24px;
+    height: 24px;
+    opacity: 0.7;
+}
+
+.director-mode-active #director-mode-indicator {
+    display: block; /* 导演模式激活时显示 */
+}
+
+#director-mode-indicator svg {
+    width: 100%;
+    height: 100%;
+    stroke: var(--primary-color);
+    stroke-width: 2;
+    fill: none;
+    animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+
+/* --- 导演模式功能栏 --- */
+#director-mode-sticker-bar {
+    display: none; /* 默认隐藏 */
+    align-items: center;
+    padding: 0 10px 5px;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+.director-mode-active #sticker-bar {
+    display: none !important; /* 导演模式时隐藏普通功能栏 */
+}
+
+.director-mode-active #director-mode-sticker-bar {
+    display: flex !important; /* 导演模式时显示导演功能栏 */
+}
+
 #chat-room-header-default .action-btn-group .action-btn img {
     width: 24px;  /* 缩小图标宽度 */
     height: 24px; /* 缩小图标高度 */
@@ -3843,6 +3926,12 @@ border-top: none;
                     <div class="online-indicator"></div>
                     <span id="chat-room-status-text">在线</span>
                 </div>
+                <!-- 新增：导演模式心电图指示器 -->
+                <div id="director-mode-indicator">
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="0 12 4 12 6 8 10 16 14 4 18 12 20 12"></polyline>
+                    </svg>
+                </div>
             </div>
             <div class="action-btn-group">
                 <button class="action-btn" id="peek-btn">
@@ -3910,6 +3999,15 @@ border-top: none;
                     <svg viewBox="0 0 24 24">
                         <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                     </svg>
+                </button>
+            </div>
+            <!-- 新增：导演模式功能栏 -->
+            <div id="director-mode-sticker-bar">
+                <button class="sticker-bar-btn" id="exit-director-mode-btn" title="退出导演模式">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"></path></svg>
+                </button>
+                 <button class="sticker-bar-btn" id="director-continue-plot-btn" title="继续剧情">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"></path></svg>
                 </button>
             </div>
             <div id="reply-preview-bar">
@@ -5290,41 +5388,37 @@ border-top: none;
             async saveChatMessages(chatId, chatType, messages) {
                 const startTime = Date.now();
                 try {
-                    // 使用事务来保证删除和写入的原子性
-                    await this.db.transaction('rw', this.db.messageChunks, async () => {
-                        // 1. 在事务中删除旧分块
-                        await this.db.messageChunks.where('chatId').equals(chatId).and(chunk => chunk.chatType === chatType).delete();
+                    // 清除该聊天的所有现有分块
+                    await this.db.messageChunks.where('chatId').equals(chatId).and(chunk => chunk.chatType === chatType).delete();
 
-                        // 2. 在事务中准备并写入新分块
-                        const chunks = [];
-                        for (let i = 0; i < messages.length; i += this.chunkSize) {
-                            const chunkMessages = messages.slice(i, i + this.chunkSize);
-                            const chunkId = `${chatId}_${chatType}_${Math.floor(i / this.chunkSize)}`;
+                    // 将消息分块存储
+                    const chunks = [];
+                    for (let i = 0; i < messages.length; i += this.chunkSize) {
+                        const chunkMessages = messages.slice(i, i + this.chunkSize);
+                        const chunkId = `${chatId}_${chatType}_${Math.floor(i / this.chunkSize)}`;
 
-                            chunks.push({
-                                id: chunkId,
-                                chatId: chatId,
-                                chatType: chatType,
-                                chunkIndex: Math.floor(i / this.chunkSize),
-                                messages: chunkMessages,
-                                timestamp: Date.now()
-                            });
-                        }
+                        chunks.push({
+                            id: chunkId,
+                            chatId: chatId,
+                            chatType: chatType,
+                            chunkIndex: Math.floor(i / this.chunkSize),
+                            messages: chunkMessages,
+                            timestamp: Date.now()
+                        });
+                    }
 
-                        if (chunks.length > 0) {
-                            await this.db.messageChunks.bulkPut(chunks);
-                        }
-                    });
+                    if (chunks.length > 0) {
+                        await this.db.messageChunks.bulkPut(chunks);
+                    }
 
-                    // 事务成功后更新缓存
+                    // 更新缓存
                     const cacheKey = `messages_${chatId}_${chatType}`;
                     this.updateCache(cacheKey, messages);
 
-                    console.log(`消息已通过事务安全保存: ${chatId}`);
+                    console.log(`消息已分块保存: ${chatId} (${chunks.length}个分块)`);
                     return true;
                 } catch (error) {
-                    console.error('保存消息事务失败:', error);
-                    // 发生错误时，事务会自动回滚，旧数据不会丢失
+                    console.error('保存消息失败:', error);
                     return false;
                 }
             }
@@ -5700,6 +5794,220 @@ border-top: none;
         }
 
         const dataStorage = new OptimizedDataStorage();
+
+        // ==================================================================================================================
+        // ========================================== DIRECTOR MODE =========================================================
+        // ==================================================================================================================
+        let isDirectorMode = false;
+
+        function toggleDirectorMode() {
+            isDirectorMode = !isDirectorMode;
+
+            const chatRoomScreen = document.getElementById('chat-room-screen');
+            const messageInput = document.getElementById('message-input');
+            const expansionPanel = document.getElementById('chat-expansion-panel');
+
+            // Toggle active class for indicator and sticker bar visibility
+            chatRoomScreen.classList.toggle('director-mode-active', isDirectorMode);
+
+            // Toggle placeholder text
+            if (isDirectorMode) {
+                messageInput.placeholder = '输入导演指令...';
+            } else {
+                messageInput.placeholder = '输入消息...';
+            }
+
+            // Close the expansion panel
+            expansionPanel.classList.remove('visible');
+
+            showToast(`导演模式已${isDirectorMode ? '开启' : '关闭'}`);
+        }
+
+        function generateDirectorModePrompt(command, historyContext = '') {
+            const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+            if (!chat) return null;
+
+            // 1. 完整复制并改造 generatePrivateSystemPrompt
+            let basePrompt = generatePrivateSystemPrompt(chat);
+
+            // 2. 修改核心任务
+            basePrompt = basePrompt.replace(
+                '你正在一个名为“404”的线上聊天软件中扮演一个角色。',
+                '你的新任务是担任一名AI故事导演。你需要根据我下达的“剧情指令”，同时扮演以下两个角色，并演绎出他们之间的对话。'
+            );
+            
+            // 新增：插入剧情回顾
+            const historySection = historyContext ? `
+【剧情回顾】
+以下是最近发生的事情，请在此基础上继续发展剧情：
+---
+${historyContext}
+---
+
+` : '';
+
+
+            // 3. 重新定义角色和输出规则
+            const roleA = { name: chat.myName || '我', persona: chat.myPersona || '一个普通人' };
+            const roleB = { name: chat.remarkName || chat.name, persona: chat.persona || '一个友好的人' };
+
+            const roleDefinitions = `
+${historySection}
+角色和对话规则：
+1.  **角色A**:
+    -   昵称: ${roleA.name}
+    -   人设: ${roleA.persona}
+2.  **角色B**:
+    -   昵称: ${roleB.name}
+    -   人设: ${roleB.persona}
+3.  **本次剧情指令**: "${command}"
+`;
+            // 替换掉原有的角色定义部分
+            basePrompt = basePrompt.replace(/角色和对话规则：[\s\S]*?4\. 我的消息中可能会出现特殊格式/g, roleDefinitions + '4. 你的消息中可能会出现特殊格式');
+
+            // 升级输出规则
+            const outputRuleRegex = /13\. 你的输出格式必须严格遵循以下格式：([\s\S]*?)14\./;
+            const newOutputRule = `13. 你的输出格式必须严格遵循以下格式，在每条消息前明确标注发言人昵称：
+    a) 普通消息: [${roleA.name}的消息：{消息内容}] 或 [${roleB.name}的消息：{消息内容}]
+    b) 礼物: [${roleA.name}送来的礼物：{礼物描述}] 或 [${roleB.name}送来的礼物：{礼物描述}]
+    c) 语音: [${roleA.name}的语音：{语音内容}] 或 [${roleB.name}的语音：{语音内容}]
+    d) 照片/视频: [${roleA.name}发来的照片/视频：{描述}] 或 [${roleB.name}发来的照片/视频：{描述}]
+    e) 转账: [${roleA.name}的转账：{金额}元；备注：{备注}] 或 [${roleB.name}的转账：{金额}元；备注：{备注}]
+    f) 表情包/图片: [${roleA.name}发送的表情包：{表情包路径}] 或 [${roleB.name}发送的表情包：{表情包路径}]。注意：这里的路径不需要包含"https://i.postimg.cc/"，只需要提供后面的部分，例如 "害羞vHLfrV3K/1.jpg"。
+    g) 引用回复: [${roleA.name}引用“{某条消息内容}”并回复：{回复内容}] 或 [${roleB.name}引用“{某条消息内容}”并回复：{回复内容}]
+    h) 撤回消息(此条不显示): [${roleA.name}撤回了上一条消息：{被撤回消息的原文}] 或 [${roleB.name}撤回了上一条消息：{被撤回消息的原文}]
+    i) 接收礼物/转账或更新状态等特殊指令，两个角色均可使用，格式不变。
+14.`;
+            basePrompt = basePrompt.replace(outputRuleRegex, newOutputRule);
+            
+            // 移除关于“我”的规则，因为现在两个角色都是AI
+            basePrompt = basePrompt.replace(/我的消息中可能会出现特殊格式，请根据其内容和你的角色设定进行回应：/g, '两个角色都可以发送和接收特殊格式的消息，请根据其内容和角色设定进行演绎：');
+            basePrompt = basePrompt.replace(/\[${chat.myName}.*?\]/g, (match) => match.replace(chat.myName, '角色A或角色B'));
+
+            // 新增：替换掉与导演模式冲突的“对话节奏”规则
+            basePrompt = basePrompt.replace(
+                /14\. \*\*对话节奏\*\*[\s\S]*?15\./,
+                '14. **场景长度**: 请根据角色设定，参考剧情指令自然地生成一段对话，对话的总消息数应在15-25条。\n15.'
+            );
+
+            return basePrompt;
+        }
+
+        async function parseAndRenderScene(sceneText) {
+            const lines = sceneText.split('\n').filter(line => line.trim() !== '');
+            const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+            if (!chat) return;
+
+            const roleB_Name = chat.remarkName || chat.name;
+            const roleA_Name = chat.myName || '我';
+
+            for (const line of lines) {
+                const content = line.trim();
+                if (!content) continue;
+
+                let role, senderId;
+                
+                // 使用正则表达式来判断说话人，更健壮
+                const speakerRegex = new RegExp(`^\\[(${roleA_Name}|${roleB_Name})`);
+                const match = content.match(speakerRegex);
+
+                if (match) {
+                    const speakerName = match[1];
+                    if (speakerName === roleA_Name) {
+                        role = 'user';
+                        senderId = 'user_me';
+                    } else if (speakerName === roleB_Name) {
+                        role = 'assistant';
+                        senderId = chat.id;
+                    } else {
+                        continue; // 如果说话人不是预期的两个角色之一，则跳过此行
+                    }
+                } else {
+                    // 如果没有匹配到，可能是AI生成的特殊指令，如更新状态
+                    // 我们可以暂时忽略这些，或者根据需要进行处理
+                    continue;
+                }
+
+                const message = {
+                    id: `msg_director_${Date.now()}_${Math.random()}`,
+                    role: role,
+                    content: content,
+                    parts: [{ type: 'text', text: content }],
+                    timestamp: Date.now(),
+                    senderId: senderId
+                };
+
+                chat.history.push(message);
+                addMessageBubble(message, currentChatId, currentChatType);
+                await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 500)); // Simulate typing delay
+            }
+            await saveData();
+            renderChatList();
+        }
+
+        async function executeDirectorCommand(commandText) {
+            if (isGenerating) return;
+
+            const { url, key, model } = db.apiSettings;
+            if (!url || !key || !model) {
+                showToast('请先在“api”应用中完成设置！');
+                switchScreen('api-settings-screen');
+                return;
+            }
+            
+            const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+            if (!chat) {
+                showToast('无法生成导演指令，请检查聊天对象是否存在。');
+                return;
+            }
+
+            // 获取历史记录作为上下文
+            const historySlice = chat.history.slice(-chat.maxMemory);
+            const historyContext = historySlice.map(msg => msg.content).join('\n');
+
+            const systemPrompt = generateDirectorModePrompt(commandText, historyContext);
+            if (!systemPrompt) {
+                showToast('无法生成导演指令，请检查聊天对象是否存在。');
+                return;
+            }
+
+            isGenerating = true;
+            typingIndicator.textContent = `导演正在构思场景...`;
+            typingIndicator.style.display = 'block';
+            messageArea.scrollTop = messageArea.scrollHeight;
+
+            try {
+                const requestBody = {
+                    model: model,
+                    messages: [{ role: 'user', content: systemPrompt }],
+                    temperature: 0.75,
+                };
+
+                const endpoint = `${url}/v1/chat/completions`;
+                const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
+
+                const response = await fetch(endpoint, { method: 'POST', headers: headers, body: JSON.stringify(requestBody) });
+
+                if (!response.ok) {
+                    throw new Error(`API 错误: ${response.status} ${await response.text()}`);
+                }
+
+                const result = await response.json();
+                const sceneText = result.choices[0].message.content;
+
+                typingIndicator.style.display = 'none';
+                await parseAndRenderScene(sceneText);
+
+            } catch (error) {
+                console.error('导演模式执行失败:', error);
+                showToast(`导演模式执行失败: ${error.message}`);
+            } finally {
+                isGenerating = false;
+                typingIndicator.style.display = 'none';
+            }
+        }
+        // ==================================================================================================================
+
 
         // 兼容性适配器 - 保持原有API接口
         const saveData = async (data) => {
@@ -8693,6 +9001,14 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
         function setupChatRoom() {
             const placeholderPlusBtn = document.getElementById('placeholder-plus-btn');
             const chatExpansionPanel = document.getElementById('chat-expansion-panel');
+            const exitDirectorModeBtn = document.getElementById('exit-director-mode-btn');
+            const continuePlotBtn = document.getElementById('director-continue-plot-btn');
+
+            exitDirectorModeBtn.addEventListener('click', toggleDirectorMode);
+
+            continuePlotBtn.addEventListener('click', () => {
+               executeDirectorCommand("继续剧情");
+            });
 
             placeholderPlusBtn.addEventListener('click', () => {
                 // Hide sticker modal if open
@@ -9092,7 +9408,7 @@ if (newTextRaw) {
 
         function createMessageBubbleElement(message) {
             const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
-            const {role, content, timestamp, id, transferStatus, giftStatus, stickerData, senderId, quote, isWithdrawn, originalContent} = message;
+            const {role, content, timestamp, id, transferStatus, giftStatus, stickerData, senderId, quote, isWithdrawn, originalContent, type} = message;
 
             const wrapper = document.createElement('div');
             wrapper.dataset.id = id;
@@ -9126,12 +9442,29 @@ if (newTextRaw) {
             const timeSkipMatch = content.match(timeSkipRegex);
             const inviteMatch = content.match(inviteRegex);
             const renameMatch = content.match(renameRegex);
+            const isDirectorCommand = type === 'director_command';
             const invisibleRegex = /\[.*?(?:接收|退回).*?的转账\]|\[.*?更新状态为：.*?\]|\[.*?已接收礼物\]|\[system:.*?\]|\[系统情景通知：.*?\]/;
             if (invisibleRegex.test(content)) {
                 return null;
             }
 
-            if (timeSkipMatch || inviteMatch || renameMatch) {
+            if (isDirectorCommand) {
+                wrapper.className = 'message-wrapper system-notification';
+                const commandText = content.replace('[system-display:🎬 导演指令：', '').replace(']', '');
+                const timeString = new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+                wrapper.innerHTML = `
+                    <div class="director-command-bubble">
+                        <div class="director-command-timestamp" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                            ${timeString}
+                        </div>
+                        <div class="director-command-content" style="display: none;">
+                            🎬 导演指令：${commandText}
+                        </div>
+                    </div>
+                `;
+                return wrapper;
+            } else if (timeSkipMatch || inviteMatch || renameMatch) {
                 wrapper.className = 'message-wrapper system-notification';
                 let bubbleText = '';
                 if (timeSkipMatch) bubbleText = timeSkipMatch[1];
@@ -9552,8 +9885,44 @@ if (newTextRaw) {
         async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || isGenerating) return;
-    messageInput.value = ''; // Clear input immediately for better UX
+
     const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+    if (!chat) return;
+
+    // Director Mode Logic
+    if (isDirectorMode) {
+        // 1. Display the command for user reference
+        const displayMessage = {
+            id: `msg_director_cmd_${Date.now()}`,
+            role: 'system',
+            type: 'director_command', // Add a type for easy identification
+            content: `[system-display:🎬 导演指令：${text}]`,
+            parts: [],
+            timestamp: Date.now()
+        };
+        chat.history.push(displayMessage);
+        addMessageBubble(displayMessage, currentChatId, currentChatType);
+
+        // 2. Save the command to history for AI context
+        const contextMessage = {
+            id: `msg_director_ctx_${Date.now()}`,
+            role: 'user', // Treat as user input for context
+            content: `[system: 导演指令： ${text}]`,
+            parts: [{ type: 'text', text: `[system: 导演指令： ${text}]` }],
+            timestamp: Date.now()
+        };
+        if (currentChatType === 'group') {
+            contextMessage.senderId = 'user_me';
+        }
+        chat.history.push(contextMessage);
+        
+        await saveData();
+        messageInput.value = '';
+        renderChatList();
+        return;
+    }
+
+    messageInput.value = ''; // Clear input immediately for better UX
 
     // --- 时间感知功能注入点 开始 ---
 if (db.apiSettings && db.apiSettings.timePerceptionEnabled) {
@@ -9941,6 +10310,11 @@ return `${seconds}秒`;
             const expansionGrid = document.getElementById('chat-expansion-grid');
             const expansionItems = [
                 {
+                    id: 'director-mode',
+                    name: '导演模式',
+                    icon: '🎬'
+                },
+                {
                     id: 'memory-journal',
                     name: '回忆日记',
                     icon: `<svg viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12,13.09C11.67,13.03 11.34,13 11,13A3,3 0 0,0 8,16A3,3 0 0,0 11,19C12.36,19 13.5,18.15 13.91,17H16V15H13.91C13.5,13.85 12.36,13.09 12,13.09M11,17A1,1 0 0,1 10,16A1,1 0 0,1 11,15A1,1 0 0,1 12,16A1,1 0 0,1 11,17Z" /></svg>`
@@ -9957,8 +10331,9 @@ return `${seconds}秒`;
                 const itemEl = document.createElement('div');
                 itemEl.className = 'expansion-item';
                 itemEl.dataset.action = item.id;
+                const isSvg = item.icon.trim().startsWith('<svg');
                 itemEl.innerHTML = `
-                    <div class="expansion-item-icon">${item.icon}</div>
+                    <div class="expansion-item-icon" style="${isSvg ? '' : 'font-size: 32px;'}">${item.icon}</div>
                     <span class="expansion-item-name">${item.name}</span>
                 `;
                 expansionGrid.appendChild(itemEl);
@@ -9970,6 +10345,9 @@ return `${seconds}秒`;
 
                 const action = item.dataset.action;
                 switch (action) {
+                    case 'director-mode':
+                        toggleDirectorMode();
+                        break;
                     case 'memory-journal':
                         // 跳转到回忆日记界面
                         renderJournalList();
@@ -10303,6 +10681,20 @@ return `${seconds}秒`;
         }
 
         async function getAiReply(chatId, chatType) {
+            if (isDirectorMode) {
+                const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
+                if (!chat) return;
+                const lastCommand = chat.history.slice().reverse().find(m => m.content.startsWith('[system: 导演指令：'));
+                if (lastCommand) {
+                    const commandTextMatch = lastCommand.content.match(/\[system: 导演指令： ([\s\S]*)\]/);
+                    if (commandTextMatch && commandTextMatch[1]) {
+                        executeDirectorCommand(commandTextMatch[1]);
+                        return;
+                    }
+                }
+                showToast('请先使用发送按钮（➤）提交一条导演指令。');
+                return;
+            }
             if (isGenerating) return;
             const {url, key, model, provider} = db.apiSettings;
             if (!url || !key || !model) {
