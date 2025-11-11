@@ -4663,13 +4663,11 @@ border-top: none;
 }
 
 /* --- 新增：双语气泡样式 --- */
-/* --- 新增：双语气泡样式 --- */
 .bilingual-bubble {
     position: relative;
     /* padding-right: 35px; */ /* 移除为图标预留的内边距 */
     cursor: pointer;
 }
-
 
 .translation-text {
     font-size: 14px;
@@ -4677,10 +4675,10 @@ border-top: none;
     background-color: rgba(255, 255, 255, 0.7);
     padding: 4px 10px;
     margin-top: 5px;
-    margin-left: 54px; /* 根据您的头像宽度调整 */
+    margin-left: 44px; /* 根据您的头像宽度(36px) + 气泡外边距(8px)调整 */
     margin-right: 8px;
     border-radius: 10px;
-    max-width: calc(100% - 62px);
+    max-width: calc(100% - 52px); /* 44px + 8px = 52px */
     display: none; /* 默认隐藏 */
     animation: fadeIn 0.3s ease;
     align-self: flex-start;
@@ -4688,13 +4686,14 @@ border-top: none;
 
 .message-wrapper.sent .translation-text {
     align-self: flex-end;
-    margin-right: 54px;
+    margin-right: 44px; /* 根据您的头像宽度(36px) + 气泡外边距(8px)调整 */
     margin-left: 8px;
 }
 
 .translation-text.active {
     display: block; /* 点击后显示 */
 }
+
 /* --- 新增样式结束 --- */
 
     </style>
@@ -6266,6 +6265,7 @@ border-top: none;
                 notes: [
                     "新增：双语模式，位于聊天界面的侧边栏内，当char为外国人而你想要更沉浸式的对话时，可按需开启，开启后会将“外文（中文）”的消息识别成双语消息气泡，注意！中文翻译必须在括号内，点击气泡后展开翻译",
                     "新增：流式传输开关，位于api设置界面，开跟不开不知道有什么区别，总之做了嗯嗯。老是破限破不开的宝宝可以把流式传输关了。",
+                    "新增：拓展css美化代码，指路→主屏幕的自定义app→全局美化css中，下滑。可自行复制需要的部分应用到全局美化中。",
                     "补充教学：发现有些宝宝还有地方不太清楚怎么使用，补充一下",
                     "1. 偷看手机：存储为临时存储，离开char手机页面后，偷看的相关内容将会清空，有喜欢的内容请及时截图",
                     "2. 回忆日记：生成日记后，需点亮该篇日记右上角的☆按钮收藏，收藏后该篇日记才会作为char的回忆加入聊天上下文中",
@@ -10121,6 +10121,18 @@ border-top: none;
                         showToast('小部件已恢复默认');
                     }
                 }
+
+                if (e.target.classList.contains('copy-css-btn')) {
+                    const codeBlock = e.target.closest('.css-template-card').querySelector('code');
+                    if (codeBlock) {
+                        navigator.clipboard.writeText(codeBlock.textContent.trim()).then(() => {
+                            showToast('代码已复制到剪贴板！');
+                        }).catch(err => {
+                            showToast('复制失败: ' + err);
+                            console.error('Copy failed', err);
+                        });
+                    }
+                }
             });
 
          customizeForm.addEventListener('change', async (e) => {
@@ -10238,6 +10250,176 @@ border-top: none;
                             <button type="button" id="global-css-manage-btn" class="btn" style="padding:7px 10px;border-radius:8px;">管理</button>
                         </div>
                     </div>
+                    <!-- CSS模板模块开始 -->
+                    <div class="css-template-module" style="margin-top: 20px; border-top: 1px solid #fce4ec; padding-top: 15px;">
+                        <h5 style="font-size: 1em; color: var(--secondary-color); margin-bottom: 15px;">部分拓展css美化功能代码</h5>
+                        <div class="css-template-list" style="display: flex; flex-direction: column; gap: 15px;">
+                            
+                            <!-- 模板1：底部功能栏简洁模式 -->
+                            <div class="css-template-card" style="background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <h6 style="margin: 0; font-size: 1em; color: #333;">底部功能栏简洁模式代码</h6>
+                                    <button type="button" class="btn btn-secondary btn-small copy-css-btn">复制</button>
+                                </div>
+                                <pre style="background: #f5f5f5; padding: 10px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; font-size: 12px; max-height: 150px; overflow-y: auto;"><code>/* 步骤一：重新定位和调整输入框区域 (无变动) */
+.message-input-area {
+  position: relative !important;
+  padding-left: 50px !important;
+}
+/* 步骤二：将功能栏(#sticker-bar)改造成一个看不见的、悬浮的容器 (无变动) */
+#sticker-bar {
+  position: absolute !important;
+  bottom: 8px !important;
+  left: 8px !important;
+  z-index: 10 !important;
+  width: 40px !important;
+  height: 44px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 10px;
+  box-shadow: none !important;
+  transition: all 0.25s ease-out !important;
+}
+
+/* 步骤三：创建我们的“虚拟”扳机键（“+”号） (无变动) */
+#sticker-bar::before,
+#sticker-bar::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 20px !important;
+  height: 2px !important;
+  background-color: transparent !important;
+  border-radius: 1px !important;
+  transition: transform 0.25s ease-out !important;
+}
+
+/* 步骤四：将两条线组合成一个“+”号 (无变动) */
+#sticker-bar::before {
+  transform: translate(-50%, -50%) rotate(0deg) !important;
+}
+#sticker-bar::after {
+  transform: translate(-50%, -50%) rotate(90deg) !important;
+}
+
+/* 步骤五：当悬停时，让“+”号旋转成“×” (无变动) */
+#sticker-bar:hover::before {
+  transform: translate(-50%, -50%) rotate(135deg) !important;
+}
+#sticker-bar:hover::after {
+  transform: translate(-50%, -50%) rotate(45deg) !important;
+}
+
+/* 步骤六：默认隐藏所有真实的功能按钮 (无变动) */
+#sticker-bar .sticker-bar-btn {
+  display: none !important;
+}
+
+/* 步骤七：当悬停时，展开面板并显示所有按钮 (核心修改) */
+#sticker-bar:hover {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 8px !important;
+  width: 120px !important;
+  height: auto !important;
+  padding: 10px !important;
+  /* --- 优化点 1: 拉开距离 --- */
+  /* 将向上偏移量从 60px 增加到 85px，为手指留出安全区 */
+  bottom: 85px !important; 
+  border-radius: 18px !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+/* 修改后 */
+@keyframes fadeInButtons {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    /* --- 核心优化：动画结束时才允许按钮被点击 --- */
+    pointer-events: auto;
+  }
+}
+
+/* 步骤八：设置展开后面板里按钮的样式 (核心修改) */
+#sticker-bar:hover .sticker-bar-btn {
+  display: flex !important;
+  width: auto !important;
+  padding: 5px !important;
+  border-radius: 10px;
+  background-color: rgba(240, 240, 240, 0.8);
+  
+  /* --- 核心优化：初始状态下按钮不可点击 --- */
+  pointer-events: none; 
+
+  opacity: 0; 
+  transform: translateY(5px); 
+  animation: fadeInButtons 0.2s ease-out 0.1s forwards !important;
+}
+
+/* 步骤九：当面板展开时，隐藏掉我们用伪元素画的“+”/“x”号 (无变动) */
+#sticker-bar:hover::before,
+#sticker-bar:hover::after {
+  display: none !important;
+}
+
+/* 步骤一：为扳机键设置背景图，这将成为你的新图标 */
+#sticker-bar {
+  background-image: url('https://i.postimg.cc/9QZd6mhp/ji-lichan-110.png') !important;
+  background-size: 28px 22px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+/* 步骤二：强制隐藏掉原来用伪元素画的“+”号，解决重叠问题 */
+#sticker-bar::before,
+#sticker-bar::after {
+  display: none !important;
+}
+
+/* 步骤三：当面板展开时，隐藏背景图，避免它出现在展开的面板上 */
+#sticker-bar:hover {
+  background-image: none !important;
+}</code></pre>
+                            </div>
+
+                            <!-- 模板2：隐藏聊天顶栏线 -->
+                            <div class="css-template-card" style="background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <h6 style="margin: 0; font-size: 1em; color: #333;">隐藏聊天顶栏线</h6>
+                                    <button type="button" class="btn btn-secondary btn-small copy-css-btn">复制</button>
+                                </div>
+                                <pre style="background: #f5f5f5; padding: 10px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; font-size: 12px; max-height: 150px; overflow-y: auto;"><code>/* --- 3. 进入聊天界面-顶部栏的底部那条线的隐藏 --- */
+#chat-room-screen .app-header {
+    border-bottom: none !important;
+}</code></pre>
+                            </div>
+                            <!-- 模板3：透明底表情包无气泡 -->
+                            <div class="css-template-card" style="background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <h6 style="margin: 0; font-size: 1em; color: #333;">表情包无气泡背景</h6>
+                                    <button type="button" class="btn btn-secondary btn-small copy-css-btn">复制</button>
+                                </div>
+                                <pre style="background: #f5f5f5; padding: 10px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; font-size: 12px; max-height: 150px; overflow-y: auto;"><code>/* 1. 表情包消息容器（外层）背景全透明 */
+.message-wrapper:has(.image-bubble) {
+  background-color: transparent; /* 完全透明背景 */
+}
+
+/* 2. 表情包气泡（内层）背景全透明（避免默认白色/浅色背景） */
+.image-bubble {
+  background-color: transparent !important; /* 强制覆盖默认样式 */
+  box-shadow: none; /* 可选：移除气泡阴影，让透明更彻底 */
+  padding: 0; /* 可选：清除内边距，避免多余透明区域 */
+  max-width: 95px !important;
+  max-height: 95px !important;
+}</code></pre>
+                            </div>
+
+                        </div>
+                    </div>
+                    <!-- CSS模板模块结束 -->
                 </div>
             </div>
             `;
