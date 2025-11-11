@@ -990,55 +990,6 @@
             margin-right: auto;
         }
 
-        /* --- Bilingual Bubble Styles --- */
-        .bilingual-bubble {
-            position: relative;
-            padding-right: 35px; /* Space for the icon */
-        }
-
-        .translate-icon {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 12px;
-            font-weight: bold;
-            color: #888;
-            border: 1px solid #ccc;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-
-        .translation-text {
-            font-size: 14px;
-            color: #555;
-            background-color: rgba(255, 255, 255, 0.7);
-            padding: 8px 12px;
-            margin-top: 5px;
-            margin-left: 54px;
-            margin-right: 8px;
-            border-radius: 10px;
-            max-width: calc(100% - 62px);
-            display: none;
-            animation: fadeIn 0.3s ease;
-            align-self: flex-start; /* Default for received */
-        }
-
-        .message-wrapper.sent .translation-text {
-            align-self: flex-end;
-            margin-right: 54px;
-            margin-left: 8px;
-        }
-
-        .translation-text.active {
-            display: block;
-        }
-        /* --- End Bilingual Bubble Styles --- */
 
         .pv-card {
             width: 230px;
@@ -4712,41 +4663,19 @@ border-top: none;
 }
 
 /* --- 新增：双语气泡样式 --- */
+/* --- 新增：双语气泡样式 --- */
 .bilingual-bubble {
     position: relative;
-    padding-right: 35px; /* 为“译”图标留出空间 */
+    /* padding-right: 35px; */ /* 移除为图标预留的内边距 */
     cursor: pointer;
 }
 
-.bilingual-bubble .translate-icon {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    font-weight: bold;
-    color: #888;
-    border: 1px solid #ccc;
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.bilingual-bubble:hover .translate-icon {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
 
 .translation-text {
     font-size: 14px;
     color: #555;
     background-color: rgba(255, 255, 255, 0.7);
-    padding: 8px 12px;
+    padding: 4px 10px;
     margin-top: 5px;
     margin-left: 54px; /* 根据您的头像宽度调整 */
     margin-right: 8px;
@@ -5199,11 +5128,6 @@ border-top: none;
                 </div>                
                 <div class="form-group"><label for="setting-theme-color">主题颜色 (对方/我方)</label><select
                         id="setting-theme-color"></select></div>
-
-                <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #fce4ec; border-radius: 10px; background-color: #fff8fa; margin-top: 10px;">
-                    <label for="setting-bilingual-mode" style="margin-bottom: 0; color: var(--secondary-color); font-weight: 600;">双语聊天模式</label>
-                    <input type="checkbox" id="setting-bilingual-mode" style="width: auto; height: 20px; width: 20px;">
-                </div>
 
                 <hr style="border:none; border-top:1px solid #eee; margin: 20px 0;">
                 <div class="form-group">
@@ -11296,7 +11220,7 @@ if (bilingualBubble) {
             const {role, content, timestamp, id, transferStatus, giftStatus, stickerData, senderId, quote, isWithdrawn, originalContent} = message;
     // --- 新增：双语模式判断逻辑 ---
             const isBilingualMode = chat.bilingualModeEnabled;
-            const bilingualRegex = /^双语消息:\s*\[.*?的消息：(.+?)\s*[（(]([^）)]+)[）)]\]$/;
+            const bilingualRegex = /^\[.*?的消息：(.+?)\s*[（(]([^）)]+)[）)]\]$/;
             const bilingualMatch = (isBilingualMode && role === 'assistant') ? content.match(bilingualRegex) : null;
 
             if (bilingualMatch) {
@@ -11314,7 +11238,15 @@ if (bilingualBubble) {
 
                 const bubbleElement = document.createElement('div');
                 bubbleElement.className = 'message-bubble received bilingual-bubble';
-                bubbleElement.innerHTML = `<span>${DOMPurify.sanitize(foreignText)}</span><div class="translate-icon">译</div>`;
+                bubbleElement.innerHTML = `<span>${DOMPurify.sanitize(foreignText)}</span>`;
+                const themeKey = chat.theme || 'white_pink';
+                const theme = colorThemes[themeKey] || colorThemes['white_pink'];
+                const bubbleTheme = theme.received;
+                if (!chat.useCustomBubbleCss) {
+                    bubbleElement.style.backgroundColor = bubbleTheme.bg;
+                    bubbleElement.style.color = bubbleTheme.text;
+                }
+
         
                 const translationDiv = document.createElement('div');
                 translationDiv.className = 'translation-text';
@@ -12508,7 +12440,8 @@ return `${seconds}秒`;
             prompt += `14. **对话节奏**: 你需要模拟真人的聊天习惯，你可以一次性生成多条短消息。每次要回复至少3-8条消息。并根据当前行为/心情/地点变化实时更新状态。\n`;
             prompt += `15. 不要主动结束对话，除非我明确提出。保持你的人设，自然地进行对话。`;
             if (character.bilingualModeEnabled) {
-            prompt += `✨双语模式特别指令✨：当你说外语时，你的回复必须严格遵循以下格式：[${character.realName}的消息：{外语原文}（中文翻译）]例如: [${character.realName}的消息：Of course, I'd love to.（当然，我很乐意。）]当你说中文时，请使用标准格式: [${character.realName}的消息：我正在学习中文] 。中文翻译视为系统自翻译，不视为角色原话。这条规则的优先级非常高，请务必遵守。 `; }
+            prompt += `✨双语模式特别指令✨：当你说外语时，你的回复必须严格遵循以下格式：[${character.realName}的消息：{外语原文}（中文翻译）]例如: [${character.realName}的消息：Of course, I'd love to.（当然，我很乐意。）]当你说中文时，请使用标准格式: [${character.realName}的消息：我正在学习中文] 。中文翻译视为系统自翻译，不视为角色原话。这条规则的优先级非常高，请务必遵守。 `;
+           }
 
             return prompt;
         }
