@@ -11438,7 +11438,7 @@ if (bilingualBubble) {
             const {role, content, timestamp, id, transferStatus, giftStatus, stickerData, senderId, quote, isWithdrawn, originalContent} = message;
     // --- 新增：双语模式判断逻辑 ---
             const isBilingualMode = chat.bilingualModeEnabled;
-            const bilingualRegex = /^\[.*?的消息：(.+?)\s*[（(]([^）)]+)[）)]\]$/;
+            const bilingualRegex = /^\[.*?的消息：([\s\S]*)\s*[（(]([^）)]+)[）)]\]$/;
             const bilingualMatch = (isBilingualMode && role === 'assistant') ? content.match(bilingualRegex) : null;
 
             if (bilingualMatch) {
