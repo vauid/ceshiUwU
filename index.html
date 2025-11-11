@@ -5389,7 +5389,14 @@ border-top: none;
             <div class="title-container">
                 <h1 class="title">Ta的手机</h1>
             </div>
-            <button class="action-btn" id="peek-settings-btn"><img src="https://i.postimg.cc/nhwP4pQy/chan-73.png" alt="设置"></button>
+            <div class="action-btn-group">
+                <button class="action-btn" id="generate-all-peek-btn" title="一键生成">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                        <path d="M19 8L21 10L19 12L17 10L19 8M11.5 2.5L13 5.5L16 7L13 8.5L11.5 11.5L10 8.5L7 7L10 5.5L11.5 2.5M17 14L19 16L17 18L15 16L17 14M5.94 4.5L7.5 9.06L2.94 10.62L5.94 4.5M10.62 13.38L5.94 19.5L2.94 13.38L7.5 14.94L10.62 13.38Z"/>
+                    </svg>
+                </button>
+                <button class="action-btn" id="peek-settings-btn"><img src="https://i.postimg.cc/nhwP4pQy/chan-73.png" alt="设置"></button>
+            </div>
         </header>
         <main class="content" style="padding: 50px 0; justify-content: flex-start; align-items: center;">
             <!-- Content rendered by renderPeekScreen() -->
@@ -8424,6 +8431,9 @@ border-top: none;
             });
 
             // New simplified settings functionality
+            const generateAllBtn = document.getElementById('generate-all-peek-btn');
+            generateAllBtn?.addEventListener('click', generateAllPeekContentInOneGo);
+
             peekSettingsBtn?.addEventListener('click', () => {
                 renderPeekSettings();
                 peekWallpaperModal.classList.add('visible');
@@ -15421,6 +15431,133 @@ function renderForumPosts(posts) {
                     break;
             }
             return prompt;
+        }
+
+        function generateAllPeekContentPrompt(char, mainChatContext) {
+            let prompt = `你正在模拟一个名为 ${char.realName} 的角色的手机内部信息。`;
+            prompt += `该角色的核心人设是：${char.persona}。\n`;
+
+            const associatedWorldBooks = (char.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
+            if (associatedWorldBooks.length > 0) {
+                const worldBookContext = associatedWorldBooks.map(wb => `设定名: ${wb.name}\n内容: ${wb.content}`).join('\n\n');
+                prompt += `\n为了更好地理解背景，请参考以下世界观设定：\n---\n${worldBookContext}\n---\n`;
+            }
+            if (char.myPersona) {
+                prompt += `\n作为参考，我（用户）的人设是：${char.myPersona}\n`;
+            }
+
+            prompt += `最近，我（称呼为 ${char.myName}）和 ${char.realName} 的对话如下（这是你们关系和当前状态的核心参考）：\n---\n${mainChatContext}\n---\n`;
+            prompt += `现在，请你一次性生成Ta手机上所有应用的内容，包括：消息、备忘录、购物车、文件传输助手、浏览器历史、草稿箱、相册、步数、和微博(unlock)。\n`;
+            prompt += `你的输出必须是一个单一的JSON对象，键是应用的英文ID（例如 "messages", "album"），值是对应应用的数据结构。请严格遵循以下JSON结构，不要有任何额外的解释或标记：\n`;
+            prompt += `
+            {
+              "messages": { "conversations": [ { "partnerName": "...", "history": [ { "sender": "char", "content": "..." } ] } ] },
+              "memos": { "memos": [ { "id": "memo_1", "title": "...", "content": "..." } ] },
+              "cart": { "items": [ { "id": "cart_1", "title": "...", "spec": "...", "price": "..." } ] },
+              "transfer": { "entries": [ "...", "..." ] },
+              "browser": { "history": [ { "title": "...", "url": "...", "annotation": "..." } ] },
+              "drafts": { "draft": { "to": "${char.myName}", "content": "..." } },
+              "album": { "photos": [ { "type": "photo", "imageDescription": "...", "description": "..." } ] },
+              "steps": { "currentSteps": 1234, "trajectory": [ "...", "..." ], "annotation": "..." },
+              "unlock": { "nickname": "...", "handle": "...", "bio": "...", "posts": [ { "timestamp": "...", "content": "..." } ] }
+            }
+            `;
+            prompt += `所有生成的内容都必须与角色的人设、我们的聊天记录以及相关的世界观设定高度一致，以确保沉浸感。`;
+            return prompt;
+        }
+
+        async function generateAllPeekContentInOneGo() {
+            if (generatingPeekApps.size > 0) {
+                showToast('正在生成内容，请稍候...');
+                return;
+            }
+
+            const char = db.characters.find(c => c.id === currentChatId);
+            if (!char) return showToast('无法找到当前角色');
+
+            const { url, key, model, provider } = db.apiSettings;
+            if (!url || !key || !model) {
+                showToast('请先在“api”应用中完成设置！');
+                return switchScreen('api-settings-screen');
+            }
+
+            const allAppsLock = 'all_apps';
+            generatingPeekApps.add(allAppsLock);
+            showToast('正在一键生成所有应用内容，请耐心等待...');
+            
+            const genAllBtn = document.getElementById('generate-all-peek-btn');
+            if (genAllBtn) genAllBtn.disabled = true;
+
+            try {
+                const mainChatContext = char.history.slice(-10).map(m => m.content).join('\n');
+                const systemPrompt = generateAllPeekContentPrompt(char, mainChatContext);
+
+                const messages = [{ role: 'system', content: 'You are a helpful assistant designed to output JSON.' }, { role: 'user', content: systemPrompt }];
+                let requestBody;
+
+                if (provider === 'gemini') {
+                    requestBody = {
+                        contents: messages.map(msg => ({ role: msg.role === 'system' ? 'user' : msg.role, parts: [{ text: msg.content }] })),
+                        generationConfig: {
+                            response_mime_type: "application/json",
+                            temperature: 0.8,
+                            top_p: 0.9,
+                        }
+                    };
+                } else {
+                    requestBody = {
+                        model: model,
+                        messages: messages,
+                        temperature: 0.8,
+                        top_p: 0.9,
+                        response_format: { type: "json_object" },
+                    };
+                }
+
+                const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:generateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
+                const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
+
+                const response = await fetch(endpoint, { method: 'POST', headers: headers, body: JSON.stringify(requestBody) });
+                if (!response.ok) {
+                    const error = new Error(`API Error: ${response.status} ${await response.text()}`);
+                    error.response = response;
+                    throw error;
+                }
+                
+                const result = await response.json();
+                let contentStr;
+                if (provider === 'gemini') {
+                    contentStr = result.candidates[0].content.parts[0].text;
+                } else {
+                    contentStr = result.choices[0].message.content;
+                }
+                
+                const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error("AI响应中未找到有效的JSON对象。");
+                
+                const allGeneratedData = JSON.parse(jsonMatch[0]);
+
+                let validApps = 0;
+                for (const appType in allGeneratedData) {
+                    if (peekScreenApps.hasOwnProperty(appType)) {
+                        peekContentCache[appType] = allGeneratedData[appType];
+                        validApps++;
+                    }
+                }
+
+                if (validApps > 0) {
+                    showToast(`成功生成 ${validApps} 个应用的内容！现在可以点击图标查看了。`);
+                } else {
+                    throw new Error("AI返回的数据中没有包含任何有效的应用内容。");
+                }
+
+            } catch (error) {
+                showApiError(error);
+                peekContentCache = {};
+            } finally {
+                generatingPeekApps.delete(allAppsLock);
+                if (genAllBtn) genAllBtn.disabled = false;
+            }
         }
 
         async function generateAndRenderPeekContent(appType, options = {}) {
