@@ -7251,7 +7251,7 @@ border-top: none;
                     // --- END NEW ---
 
                     const { provider, streamEnabled } = db.apiSettings;
-                    const useStream = provider === 'gemini' ? true : streamEnabled;
+                    const useStream = streamEnabled;
 
                     let requestBody;
                     const messages = [
@@ -7273,7 +7273,7 @@ border-top: none;
                         };
                     }
 
-                    const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:streamGenerateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
+                    const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:${useStream ? 'streamGenerateContent' : 'generateContent'}?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
                     const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${key}`
@@ -7320,7 +7320,11 @@ border-top: none;
                         }
                     } else { // Non-streaming
                         const result = await response.json();
-                        reply = result.choices[0].message.content;
+                        if (provider === 'gemini') {
+                            reply = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                        } else {
+                            reply = result.choices[0].message.content;
+                        }
                     }
 
                     // NEW: Add user action and AI reply to session history
@@ -12814,7 +12818,7 @@ return `${seconds}秒`;
                     // 修改：根据 streamEnabled 设置 stream 属性
                     requestBody = {model: model, messages: messages, stream: streamEnabled};
                 }
-                const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:streamGenerateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
+                const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:${streamEnabled ? 'streamGenerateContent' : 'generateContent'}?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
                 const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${key}`
