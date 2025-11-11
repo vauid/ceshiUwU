@@ -11438,8 +11438,31 @@ if (bilingualBubble) {
             const {role, content, timestamp, id, transferStatus, giftStatus, stickerData, senderId, quote, isWithdrawn, originalContent} = message;
     // --- 新增：双语模式判断逻辑 ---
             const isBilingualMode = chat.bilingualModeEnabled;
-            const bilingualRegex = /^\[.*?的消息：([\s\S]*)\s*[（(]([^）)]+)[）)]\]$/;
-            const bilingualMatch = (isBilingualMode && role === 'assistant') ? content.match(bilingualRegex) : null;
+            let bilingualMatch = null;
+            if (isBilingualMode && role === 'assistant') {
+                const contentMatch = content.match(/^\[.*?的消息：([\s\S]+)\]$/);
+                if (contentMatch) {
+                    const mainText = contentMatch[1].trim();
+                    // 从后往前找到最后一个右括号
+                    const lastCloseParen = Math.max(mainText.lastIndexOf(')'), mainText.lastIndexOf('）'));
+                    if (lastCloseParen > -1) {
+                        // 从右括号的位置往前找对应的左括号
+                        const lastOpenParen = Math.max(
+                            mainText.lastIndexOf('(', lastCloseParen),
+                            mainText.lastIndexOf('（', lastCloseParen)
+                        );
+                        if (lastOpenParen > -1) {
+                            const chineseText = mainText.substring(lastOpenParen + 1, lastCloseParen).trim();
+                            const foreignText = mainText.substring(0, lastOpenParen).trim();
+                            // 确保原文和译文都不是空的
+                            if (foreignText && chineseText) {
+                                bilingualMatch = [null, foreignText, chineseText];
+                            }
+                        }
+                    }
+                }
+            }
+
 
             if (bilingualMatch) {
                 const foreignText = bilingualMatch[1].trim();
