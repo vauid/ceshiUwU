@@ -990,6 +990,56 @@
             margin-right: auto;
         }
 
+        /* --- Bilingual Bubble Styles --- */
+        .bilingual-bubble {
+            position: relative;
+            padding-right: 35px; /* Space for the icon */
+        }
+
+        .translate-icon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #888;
+            border: 1px solid #ccc;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .translation-text {
+            font-size: 14px;
+            color: #555;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 8px 12px;
+            margin-top: 5px;
+            margin-left: 54px;
+            margin-right: 8px;
+            border-radius: 10px;
+            max-width: calc(100% - 62px);
+            display: none;
+            animation: fadeIn 0.3s ease;
+            align-self: flex-start; /* Default for received */
+        }
+
+        .message-wrapper.sent .translation-text {
+            align-self: flex-end;
+            margin-right: 54px;
+            margin-left: 8px;
+        }
+
+        .translation-text.active {
+            display: block;
+        }
+        /* --- End Bilingual Bubble Styles --- */
+
         .pv-card {
             width: 230px;
             aspect-ratio: 1 / 1;
@@ -4660,6 +4710,64 @@ border-top: none;
 .collapsible-header h4 {
     flex-grow: 1;
 }
+
+/* --- 新增：双语气泡样式 --- */
+.bilingual-bubble {
+    position: relative;
+    padding-right: 35px; /* 为“译”图标留出空间 */
+    cursor: pointer;
+}
+
+.bilingual-bubble .translate-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: #888;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.bilingual-bubble:hover .translate-icon {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.translation-text {
+    font-size: 14px;
+    color: #555;
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 8px 12px;
+    margin-top: 5px;
+    margin-left: 54px; /* 根据您的头像宽度调整 */
+    margin-right: 8px;
+    border-radius: 10px;
+    max-width: calc(100% - 62px);
+    display: none; /* 默认隐藏 */
+    animation: fadeIn 0.3s ease;
+    align-self: flex-start;
+}
+
+.message-wrapper.sent .translation-text {
+    align-self: flex-end;
+    margin-right: 54px;
+    margin-left: 8px;
+}
+
+.translation-text.active {
+    display: block; /* 点击后显示 */
+}
+/* --- 新增样式结束 --- */
+
     </style>
 </head>
 
@@ -5085,8 +5193,17 @@ border-top: none;
                 <div class="form-group">
                     <button type="button" class="btn btn-secondary" id="link-world-book-btn">关联世界书</button>
                 </div>
+                <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #fce4ec; border-radius: 10px; background-color: #fff8fa;">
+                    <label for="setting-bilingual-mode" style="margin-bottom: 0; color: var(--secondary-color); font-weight: 600;">双语聊天模式</label>
+                    <input type="checkbox" id="setting-bilingual-mode" style="width: auto; height: 20px; width: 20px;">
+                </div>                
                 <div class="form-group"><label for="setting-theme-color">主题颜色 (对方/我方)</label><select
                         id="setting-theme-color"></select></div>
+
+                <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #fce4ec; border-radius: 10px; background-color: #fff8fa; margin-top: 10px;">
+                    <label for="setting-bilingual-mode" style="margin-bottom: 0; color: var(--secondary-color); font-weight: 600;">双语聊天模式</label>
+                    <input type="checkbox" id="setting-bilingual-mode" style="width: auto; height: 20px; width: 20px;">
+                </div>
 
                 <hr style="border:none; border-top:1px solid #eee; margin: 20px 0;">
                 <div class="form-group">
@@ -10801,6 +10918,16 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
                             transcript.classList.toggle('active');
                         }
                     }
+                    // --- 新增：处理双语气泡的点击 ---
+const bilingualBubble = e.target.closest('.bilingual-bubble');
+if (bilingualBubble) {
+    const translationText = bilingualBubble.closest('.message-wrapper').querySelector('.translation-text');
+    if (translationText) {
+        translationText.classList.toggle('active');
+    }
+}
+// --- 新增结束 ---
+
                     const pvCard = e.target.closest('.pv-card');
                     if (pvCard) {
                         const imageOverlay = pvCard.querySelector('.pv-card-image-overlay');
@@ -11167,21 +11294,57 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
         function createMessageBubbleElement(message) {
             const chat = (currentChatType === 'private') ? db.characters.find(c => c.id === currentChatId) : db.groups.find(g => g.id === currentChatId);
             const {role, content, timestamp, id, transferStatus, giftStatus, stickerData, senderId, quote, isWithdrawn, originalContent} = message;
+    // --- 新增：双语模式判断逻辑 ---
+            const isBilingualMode = chat.bilingualModeEnabled;
+            const bilingualRegex = /^双语消息:\s*\[.*?的消息：(.+?)\s*[（(]([^）)]+)[）)]\]$/;
+            const bilingualMatch = (isBilingualMode && role === 'assistant') ? content.match(bilingualRegex) : null;
 
+            if (bilingualMatch) {
+                const foreignText = bilingualMatch[1].trim();
+                const chineseText = bilingualMatch[2].trim();
+                const wrapper = document.createElement('div');
+                wrapper.dataset.id = id;
+                wrapper.className = 'message-wrapper received'; // 双语消息总是接收的
+
+                const bubbleRow = document.createElement('div');
+                bubbleRow.className = 'message-bubble-row';
+
+                const avatarUrl = chat.avatar;
+                const timeString = `${pad(new Date(timestamp).getHours())}:${pad(new Date(timestamp).getMinutes())}`;
+
+                const bubbleElement = document.createElement('div');
+                bubbleElement.className = 'message-bubble received bilingual-bubble';
+                bubbleElement.innerHTML = `<span>${DOMPurify.sanitize(foreignText)}</span><div class="translate-icon">译</div>`;
+        
+                const translationDiv = document.createElement('div');
+                translationDiv.className = 'translation-text';
+                translationDiv.textContent = chineseText;
+
+                bubbleRow.innerHTML = `<div class="message-info"><img src="${avatarUrl}" class="message-avatar"><span class="message-time">${timeString}</span></div>`;
+                bubbleRow.appendChild(bubbleElement);
+                wrapper.appendChild(bubbleRow);
+                wrapper.appendChild(translationDiv);
+                return wrapper;
+            }
+            // --- 双语模式逻辑结束 ---
+
+            // 如果不是双语模式，则执行旧的逻辑（这里是您原来的代码，我直接复制过来）
+            const timeSkipRegex = /\[system-display:([\s\S]+?)\]/;
+            const inviteRegex = /\[(.*?)邀请(.*?)加入了群聊\]/;
+            const renameRegex = /\[(.*?)修改群名为：(.*?)\]/;
+            const timeSkipMatch = content.match(timeSkipRegex);
+            const inviteMatch = content.match(inviteRegex);
+            const renameMatch = content.match(renameRegex);
+            const invisibleRegex = /\[.*?(?:接收|退回).*?的转账\]|\[.*?更新状态为：.*?\]|\[.*?已接收礼物\]|\[system:.*?\]|\[系统情景通知：.*?\]/;
+            if (invisibleRegex.test(content)) {
+                return null;
+            }
             const wrapper = document.createElement('div');
             wrapper.dataset.id = id;
-
             if (isWithdrawn) {
                 wrapper.className = 'message-wrapper system-notification';
                 const withdrawnText = (role === 'user') ? '你撤回了一条消息' : `${chat.remarkName || chat.name}撤回了一条消息`;
-
-                wrapper.innerHTML = `
-                    <div>
-                        <span class="withdrawn-message">${withdrawnText}</span>
-                    </div>
-                    <div class="withdrawn-content">${originalContent ? DOMPurify.sanitize(originalContent.replace(/\[.*?的消息：([\s\S]+?)\]/, '$1')) : ''}</div>
-                `;
-
+                wrapper.innerHTML = `<div><span class="withdrawn-message">${withdrawnText}</span></div><div class="withdrawn-content">${originalContent ? DOMPurify.sanitize(originalContent.replace(/\[.*?的消息：([\s\S]+?)\]/, '$1')) : ''}</div>`;
                 const withdrawnMessageSpan = wrapper.querySelector('.withdrawn-message');
                 if (withdrawnMessageSpan) {
                     withdrawnMessageSpan.addEventListener('click', () => {
@@ -11193,18 +11356,6 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
                 }
                 return wrapper;
             }
-
-            const timeSkipRegex = /\[system-display:([\s\S]+?)\]/;
-            const inviteRegex = /\[(.*?)邀请(.*?)加入了群聊\]/;
-            const renameRegex = /\[(.*?)修改群名为：(.*?)\]/;
-            const timeSkipMatch = content.match(timeSkipRegex);
-            const inviteMatch = content.match(inviteRegex);
-            const renameMatch = content.match(renameRegex);
-            const invisibleRegex = /\[.*?(?:接收|退回).*?的转账\]|\[.*?更新状态为：.*?\]|\[.*?已接收礼物\]|\[system:.*?\]|\[系统情景通知：.*?\]/;
-            if (invisibleRegex.test(content)) {
-                return null;
-            }
-
             if (timeSkipMatch || inviteMatch || renameMatch) {
                 wrapper.className = 'message-wrapper system-notification';
                 let bubbleText = '';
@@ -11214,25 +11365,23 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
                 wrapper.innerHTML = `<div class="system-notification-bubble">${bubbleText}</div>`;
                 return wrapper;
             }
-
             const isSent = (role === 'user');
             let avatarUrl, bubbleTheme, senderNickname = '';
             const themeKey = chat.theme || 'white_pink';
             const theme = colorThemes[themeKey] || colorThemes['white_pink'];
             let messageSenderId = isSent ? 'user_me' : senderId;
-
             if (isSent) {
                 avatarUrl = (currentChatType === 'private') ? chat.myAvatar : chat.me.avatar;
                 bubbleTheme = theme.sent;
             } else {
                 if (currentChatType === 'private') {
                     avatarUrl = chat.avatar;
-                } else { // Group chat received
+                } else {
                     const sender = chat.members.find(m => m.id === senderId);
                     if (sender) {
                         avatarUrl = sender.avatar;
                         senderNickname = sender.groupNickname;
-                    } else { // Fallback for unknown sender
+                    } else {
                         avatarUrl = 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg';
                     }
                 }
@@ -11246,8 +11395,6 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
             const bubbleRow = document.createElement('div');
             bubbleRow.className = 'message-bubble-row';
             let bubbleElement;
-
-            // Regexes for all message types
             const urlRegex = /^(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|bmp|svg)|data:image\/[a-z]+;base64,)/i;
             const sentStickerRegex = /\[(?:.+?)的表情包：.+?\]/i;
             const receivedStickerRegex = /\[(?:.+?)发送的表情包：([\s\S]+?)\]/i;
@@ -11260,7 +11407,8 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
             const groupGiftRegex = /\[(.*?)\s*向\s*(.*?)\s*送来了礼物：([\s\S]+?)\]/;
             const imageRecogRegex = /\[.*?发来了一张图片：\]/;
             const textRegex = /\[(?:.+?)的消息：([\s\S]+?)\]/;
-
+            const pomodoroRecordRegex = /\[专注记录\]\s*任务：([\s\S]+?)，时长：([\s\S]+?)，期间与 .*? 互动 (\d+)\s*次。/;
+            const pomodoroMatch = content.match(pomodoroRecordRegex);
             const sentStickerMatch = content.match(sentStickerRegex);
             const receivedStickerMatch = content.match(receivedStickerRegex);
             const voiceMatch = content.match(voiceRegex);
@@ -11272,99 +11420,54 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
             const groupGiftMatch = content.match(groupGiftRegex);
             const imageRecogMatch = content.match(imageRecogRegex);
             const textMatch = content.match(textRegex);
-            const pomodoroRecordRegex = /\[专注记录\]\s*任务：([\s\S]+?)，时长：([\s\S]+?)，期间与 .*? 互动 (\d+)\s*次。/;
-            const pomodoroMatch = content.match(pomodoroRecordRegex);
-
             if (pomodoroMatch) {
                 const taskName = pomodoroMatch[1];
                 const duration = pomodoroMatch[2];
                 const pokeCount = pomodoroMatch[3];
-
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = 'pomodoro-record-card';
-                
                 const details = { taskName, duration, pokeCount };
-                
-                bubbleElement.innerHTML = `
-                    <img src="https://i.postimg.cc/sgdS9khZ/chan-122.png" class="pomodoro-record-icon" alt="pomodoro complete">
-                    <div class="pomodoro-record-body">
-                        <p class="task-name">${taskName}</p>
-                    </div>
-                `;
-
-
+                bubbleElement.innerHTML = `<img src="https://i.postimg.cc/sgdS9khZ/chan-122.png" class="pomodoro-record-icon" alt="pomodoro complete"><div class="pomodoro-record-body"><p class="task-name">${taskName}</p></div>`;
                 const detailsDiv = document.createElement('div');
                 detailsDiv.className = 'pomodoro-record-details';
-                detailsDiv.innerHTML = `
-                    <p><strong>任务名称:</strong> ${taskName}</p>
-                    <p><strong>专注时长:</strong> ${duration}</p>
-                    <p><strong>“戳一戳”次数:</strong> ${pokeCount}</p>
-                `;
+                detailsDiv.innerHTML = `<p><strong>任务名称:</strong> ${taskName}</p><p><strong>专注时长:</strong> ${duration}</p><p><strong>“戳一戳”次数:</strong> ${pokeCount}</p>`;
                 wrapper.appendChild(detailsDiv);
-
                 bubbleElement.addEventListener('click', () => {
                     detailsDiv.classList.toggle('active');
                 });
-
             } else if ((isSent && sentStickerMatch && stickerData) || (!isSent && receivedStickerMatch)) {
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = 'image-bubble';
                 let stickerSrc = '';
-
                 if (isSent) {
-                    // 如果是你自己发的表情包，直接使用数据
                     stickerSrc = stickerData;
                 } else {
-                    // 如果是AI发的表情包，我们需要处理路径
-                    // 原始路径，例如："害羞vHLfrV3K/1.jpg"
-                            // --- 这是实现您新需求的修改 ---
-
-                    // 1. 检查当前角色的世界书是否包含 'catbox' 关键词
                     let useCatbox = false;
                     if (chat && chat.worldBookIds && chat.worldBookIds.length > 0) {
-                        const worldBookContent = chat.worldBookIds
-                            .map(id => db.worldBooks.find(wb => wb.id === id))
-                            .filter(Boolean)
-                            .map(wb => wb.content)
-                            .join(' ');
-
+                        const worldBookContent = chat.worldBookIds.map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean).map(wb => wb.content).join(' ');
                         if (worldBookContent.toLowerCase().includes('catbox')) {
                             useCatbox = true;
                         }
                     }
-
-                    // 2. 根据检查结果，选择图床前缀
                     const imageHost = useCatbox ? 'https://files.catbox.moe/' : 'https://i.postimg.cc/';
-
-                   // 3. 从AI回复中获取原始路径
                     const rawPath = receivedStickerMatch[1].trim();
-        
-                                        // 4. 关键: 根据图床选择不同的路径处理方式
                     let finalPath;
                     if (useCatbox) {
-                        // 对于 Catbox，AI返回 "情绪+文件名" (例如 "焦虑2a9wte.jpeg")
-                        // 我们需要用正则从中提取出真正的文件名 (例如 "2a9wte.jpeg")
                         const catboxFileRegex = /[a-z0-9]+\.(jpeg|png|gif|jpg)$/i;
                         const pathMatch = rawPath.match(catboxFileRegex);
-                        
                         if (pathMatch) {
-                            finalPath = pathMatch[0]; // 使用匹配到的文件名
+                            finalPath = pathMatch[0];
                         } else {
-                            finalPath = rawPath; // 作为备用方案，如果正则没匹配上
+                            finalPath = rawPath;
                         }
                     } else {
-                        // 对于 postimg 等其他图床，保留原有的提取逻辑
                         const pathExtractionRegex = /[a-zA-Z0-9]+\/.*$/;
                         const extractedPathMatch = rawPath.match(pathExtractionRegex);
                         finalPath = extractedPathMatch ? extractedPathMatch[0] : rawPath;
                     }
-
-                    // 5. 拼接最终URL
                     stickerSrc = `${imageHost}${finalPath}`;
                 }
-
                 bubbleElement.innerHTML = `<img src="${stickerSrc}" alt="表情包">`;
-
             } else if (privateGiftMatch || groupGiftMatch) {
                 const match = privateGiftMatch || groupGiftMatch;
                 bubbleElement = document.createElement('div');
@@ -11372,7 +11475,6 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
                 if (giftStatus === 'received') {
                     bubbleElement.classList.add('received');
                 }
-
                 let giftText;
                 if (groupGiftMatch) {
                     const from = groupGiftMatch[1];
@@ -11382,36 +11484,22 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
                     giftText = isSent ? '您有一份礼物～' : '您有一份礼物～';
                 }
                 bubbleElement.innerHTML = `<img src="https://i.postimg.cc/rp0Yg31K/chan-75.png" alt="gift" class="gift-card-icon"><div class="gift-card-text">${giftText}</div><div class="gift-card-received-stamp">已查收</div>`;
-
                 const description = groupGiftMatch ? groupGiftMatch[3].trim() : match[1].trim();
                 const descriptionDiv = document.createElement('div');
                 descriptionDiv.className = 'gift-card-description';
                 descriptionDiv.textContent = description;
                 wrapper.appendChild(descriptionDiv);
-                       } else if (content.startsWith('[论坛分享]')) {
+            } else if (content.startsWith('[论坛分享]')) {
                 const forumShareRegex = /\[论坛分享\]标题：([\s\S]+?)\n摘要：([\s\S]+)/;
                 const forumShareMatch = content.match(forumShareRegex);
-
                 if (forumShareMatch) {
                     const title = forumShareMatch[1].trim();
                     const summary = forumShareMatch[2].trim();
-
                     bubbleElement = document.createElement('div');
                     bubbleElement.className = 'forum-share-card';
-
-                    // 这是卡片内部的HTML结构
-                    bubbleElement.innerHTML = `
-                        <div class="forum-share-header">
-                            <svg viewBox="0 0 24 24"><path d="M21,3H3A2,2 0 0,0 1,5V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V5A2,2 0 0,0 21,3M21,19H3V5H21V19M8,11H16V9H8V11M8,15H13V13H8V15Z" /></svg>
-                            <span>来自论坛的分享</span>
-                        </div>
-                        <div class="forum-share-content">
-                            <div class="forum-share-title">${title}</div>
-                            <div class="forum-share-summary">${summary}</div>
-                        </div>
-                    `;
+                    bubbleElement.innerHTML = `<div class="forum-share-header"><svg viewBox="0 0 24 24"><path d="M21,3H3A2,2 0 0,0 1,5V19A2,2 0 0,0 3,21H21A2,2 0 0,0 23,19V5A2,2 0 0,0 21,3M21,19H3V5H21V19M8,11H16V9H8V11M8,15H13V13H8V15Z" /></svg><span>来自论坛的分享</span></div><div class="forum-share-content"><div class="forum-share-title">${title}</div><div class="forum-share-summary">${summary}</div></div>`;
                 }
- } else if (voiceMatch) {
+            } else if (voiceMatch) {
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = 'voice-bubble';
                 if (!chat.useCustomBubbleCss) {
@@ -11430,7 +11518,6 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
             } else if (privateSentTransferMatch || privateReceivedTransferMatch || groupTransferMatch) {
                 const isSentTransfer = !!privateSentTransferMatch || (groupTransferMatch && isSent);
                 const match = privateSentTransferMatch || privateReceivedTransferMatch || groupTransferMatch;
-
                 let amount, remarkText, titleText;
                 if (groupTransferMatch) {
                     const from = groupTransferMatch[1];
@@ -11438,17 +11525,15 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
                     amount = parseFloat(groupTransferMatch[3]).toFixed(2);
                     remarkText = groupTransferMatch[4] || '';
                     titleText = isSent ? `向 ${to} 转账` : `${from} 向你转账`;
-                } else { // Private chat
+                } else {
                     amount = parseFloat(match[1]).toFixed(2);
                     remarkText = match[2] || '';
                     titleText = isSentTransfer ? '给你转账' : '转账';
                 }
-
                 bubbleElement = document.createElement('div');
                 bubbleElement.className = `transfer-card ${isSentTransfer ? 'sent-transfer' : 'received-transfer'}`;
-
                 let statusText = isSentTransfer ? '待查收' : '转账给你';
-                if (groupTransferMatch && !isSent) statusText = '转账给Ta'; // AI to AI
+                if (groupTransferMatch && !isSent) statusText = '转账给Ta';
                 if (transferStatus === 'received') {
                     statusText = '已收款';
                     bubbleElement.classList.add('received');
@@ -11459,7 +11544,6 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
                 if ((transferStatus !== 'pending' && currentChatType === 'private') || currentChatType === 'group') {
                     bubbleElement.style.cursor = 'default';
                 }
-
                 const remarkHTML = remarkText ? `<p class="transfer-remark">${remarkText}</p>` : '';
                 bubbleElement.innerHTML = `<div class="overlay"></div><div class="transfer-content"><p class="transfer-title">${titleText}</p><p class="transfer-amount">¥${amount}</p>${remarkHTML}<p class="transfer-status">${statusText}</p></div>`;
             } else if (imageRecogMatch || urlRegex.test(content)) {
@@ -11467,71 +11551,52 @@ ${unreadBadgeHTML}`; /* <-- 将红点元素移动到这里 */
                 bubbleElement.className = 'image-bubble';
                 bubbleElement.innerHTML = `<img src="${content}" alt="图片消息">`;
             } else if (textMatch) {
-    bubbleElement = document.createElement('div');
-    bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
-    let userText = textMatch[1].trim().replace(/\[发送时间:.*?\]/g, '').trim();
-    // 使用 DOMPurify 清理和渲染 HTML
-    bubbleElement.innerHTML = DOMPurify.sanitize(userText);
-    if (!chat.useCustomBubbleCss) {
-        bubbleElement.style.backgroundColor = bubbleTheme.bg;
-        bubbleElement.style.color = bubbleTheme.text;
-    }
-} else if (message && Array.isArray(message.parts) && message.parts[0].type === 'html') {
-    bubbleElement = document.createElement('div');
-    bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
-    // 使用 DOMPurify 清理和渲染 HTML
-    // 修改后
-    bubbleElement.innerHTML = DOMPurify.sanitize(message.parts[0].text, {
-        ADD_TAGS: ['style'],  // 允许 <style> 标签
-        ADD_ATTR: ['style']   // 允许所有标签上的 style="" 属性
-    });
-
-} else {
-    bubbleElement = document.createElement('div');
-    bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
-    let displayedContent = content;
-    const plainTextMatch = content.match(/^\[.*?：([\s\S]*)\]$/);
-    if (plainTextMatch && plainTextMatch[1]) {
-        displayedContent = plainTextMatch[1].trim();
-    }
-    displayedContent = displayedContent.replace(/\[发送时间:.*?\]/g, '').trim();
-
-    // 默认使用 DOMPurify 清理和渲染所有内容
-    bubbleElement.innerHTML = DOMPurify.sanitize(displayedContent);
-
-    if (!chat.useCustomBubbleCss) {
-        bubbleElement.style.backgroundColor = bubbleTheme.bg;
-        bubbleElement.style.color = bubbleTheme.text;
-    }
-}
-
+                bubbleElement = document.createElement('div');
+                bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
+                let userText = textMatch[1].trim().replace(/\[发送时间:.*?\]/g, '').trim();
+                bubbleElement.innerHTML = DOMPurify.sanitize(userText);
+                if (!chat.useCustomBubbleCss) {
+                    bubbleElement.style.backgroundColor = bubbleTheme.bg;
+                    bubbleElement.style.color = bubbleTheme.text;
+                }
+            } else if (message && Array.isArray(message.parts) && message.parts[0].type === 'html') {
+                bubbleElement = document.createElement('div');
+                bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
+                bubbleElement.innerHTML = DOMPurify.sanitize(message.parts[0].text, { ADD_TAGS: ['style'], ADD_ATTR: ['style'] });
+            } else {
+                bubbleElement = document.createElement('div');
+                bubbleElement.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
+                let displayedContent = content;
+                const plainTextMatch = content.match(/^\[.*?：([\s\S]*)\]$/);
+                if (plainTextMatch && plainTextMatch[1]) {
+                    displayedContent = plainTextMatch[1].trim();
+                }
+                displayedContent = displayedContent.replace(/\[发送时间:.*?\]/g, '').trim();
+                bubbleElement.innerHTML = DOMPurify.sanitize(displayedContent);
+                if (!chat.useCustomBubbleCss) {
+                    bubbleElement.style.backgroundColor = bubbleTheme.bg;
+                    bubbleElement.style.color = bubbleTheme.text;
+                }
+            }
             const nicknameHTML = (currentChatType === 'group' && !isSent && senderNickname) ? `<div class="group-nickname">${senderNickname}</div>` : '';
             bubbleRow.innerHTML = `<div class="message-info">${nicknameHTML}<img src="${avatarUrl}" class="message-avatar"><span class="message-time">${timeString}</span></div>`;
             if (bubbleElement) {
-                // 新增：如果消息包含引用，则创建并预置引用块
                 if (quote) {
                     let quotedSenderName = '';
-                    // 根据senderId查找被引用消息的发送者昵称
                     if (quote.senderId === 'user_me') {
                         quotedSenderName = (currentChatType === 'private') ? chat.myName : chat.me.nickname;
                     } else {
                         if (currentChatType === 'private') {
                             quotedSenderName = chat.remarkName;
-                        } else { // group
+                       } else {
                             const sender = chat.members.find(m => m.id === quote.senderId);
                             quotedSenderName = sender ? sender.groupNickname : '未知成员';
                         }
                     }
-
                     const quoteDiv = document.createElement('div');
                     quoteDiv.className = 'quoted-message';
-                    // 使用DOMPurify清理内容, 只保留纯文本
-                    const sanitizedQuotedText = DOMPurify.sanitize(quote.content, {ALLOWED_TAGS: []});
-                    quoteDiv.innerHTML = `
-                        <span class="quoted-sender">回复 ${quotedSenderName}</span>
-                        <p class="quoted-text">${sanitizedQuotedText}</p>
-                    `;
-                    // 将引用块插入到气泡内容的顶部
+                    const sanitizedQuotedText = DOMPurify.sanitize(quote.content, { ALLOWED_TAGS: [] });
+                    quoteDiv.innerHTML = `<span class="quoted-sender">回复 ${quotedSenderName}</span><p class="quoted-text">${sanitizedQuotedText}</p>`;
                     bubbleElement.prepend(quoteDiv);
                 }
                 bubbleRow.appendChild(bubbleElement);
@@ -12442,6 +12507,9 @@ return `${seconds}秒`;
             prompt += `13. 你的输出格式必须严格遵循以下格式：${outputFormats}\n`;
             prompt += `14. **对话节奏**: 你需要模拟真人的聊天习惯，你可以一次性生成多条短消息。每次要回复至少3-8条消息。并根据当前行为/心情/地点变化实时更新状态。\n`;
             prompt += `15. 不要主动结束对话，除非我明确提出。保持你的人设，自然地进行对话。`;
+            if (character.bilingualModeEnabled) {
+            prompt += `✨双语模式特别指令✨：当你说外语时，你的回复必须严格遵循以下格式：[${character.realName}的消息：{外语原文}（中文翻译）]例如: [${character.realName}的消息：Of course, I'd love to.（当然，我很乐意。）]当你说中文时，请使用标准格式: [${character.realName}的消息：我正在学习中文] 。中文翻译视为系统自翻译，不视为角色原话。这条规则的优先级非常高，请务必遵守。 `; }
+
             return prompt;
         }
 
@@ -13878,6 +13946,7 @@ return `${seconds}秒`;
                 document.getElementById('setting-my-persona').value = e.myPersona;
                 document.getElementById('setting-theme-color').value = e.theme || 'white_pink';
                 document.getElementById('setting-max-memory').value = e.maxMemory;
+                document.getElementById('setting-bilingual-mode').checked = e.bilingualModeEnabled || false;
                 const useCustomCssCheckbox = document.getElementById('setting-use-custom-css'),
                     customCssTextarea = document.getElementById('setting-custom-bubble-css'),
                     privatePreviewBox = document.getElementById('private-bubble-css-preview');
@@ -13904,6 +13973,9 @@ return `${seconds}秒`;
                 e.maxMemory = document.getElementById('setting-max-memory').value;
                 e.useCustomBubbleCss = document.getElementById('setting-use-custom-css').checked;
                 e.customBubbleCss = document.getElementById('setting-custom-bubble-css').value;
+                // 在 e.customBubbleCss = ... 这一行下面添加
+                e.bilingualModeEnabled = document.getElementById('setting-bilingual-mode').checked;
+
                 await saveData();
                 showToast('设置已保存！');
                 chatRoomTitle.textContent = e.remarkName;
@@ -15619,3 +15691,4 @@ function renderForumPosts(posts) {
 </body>
 
 </html>
+
