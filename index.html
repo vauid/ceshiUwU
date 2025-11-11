@@ -5389,14 +5389,7 @@ border-top: none;
             <div class="title-container">
                 <h1 class="title">Ta的手机</h1>
             </div>
-            <div class="action-btn-group">
-                <button class="action-btn" id="generate-all-peek-btn" title="一键生成">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-                        <path d="M19 8L21 10L19 12L17 10L19 8M11.5 2.5L13 5.5L16 7L13 8.5L11.5 11.5L10 8.5L7 7L10 5.5L11.5 2.5M17 14L19 16L17 18L15 16L17 14M5.94 4.5L7.5 9.06L2.94 10.62L5.94 4.5M10.62 13.38L5.94 19.5L2.94 13.38L7.5 14.94L10.62 13.38Z"/>
-                    </svg>
-                </button>
-                <button class="action-btn" id="peek-settings-btn"><img src="https://i.postimg.cc/nhwP4pQy/chan-73.png" alt="设置"></button>
-            </div>
+            <button class="action-btn" id="peek-settings-btn"><img src="https://i.postimg.cc/nhwP4pQy/chan-73.png" alt="设置"></button>
         </header>
         <main class="content" style="padding: 50px 0; justify-content: flex-start; align-items: center;">
             <!-- Content rendered by renderPeekScreen() -->
@@ -6111,8 +6104,8 @@ border-top: none;
     <label for="time-perception-switch" style="margin-bottom: 0; color: var(--secondary-color); font-weight: 600;">时间感知加强</label>
     <input type="checkbox" id="time-perception-switch" style="width: auto; height: 20px; width: 20px;">
 </div>
-<div class="form-group" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #fce4ec; border-radius: 10px; background-color: #fff8fa; margin-top: 10px;">
-    <label for="stream-switch" style="margin-bottom: 0; color: var(--secondary-color); font-weight: 600;">开启流式输出</label>
+<div class.blade.php="form-group" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #fce4ec; border-radius: 10px; background-color: #fff8fa; margin-top: 10px;">
+    <label for="stream-switch" style="margin-bottom: 0; color: var(--secondary-color); font-weight: 600;">流式输出</label>
     <input type="checkbox" id="stream-switch" style="width: auto; height: 20px; width: 20px;">
 </div>
 <button type="submit" class="btn btn-primary" id="save-btn"><span class="btn-text">保 存</span><div class="spinner"></div></button></form><div class="api-presets-embedded" style="margin-top:12px;"><div id="api-presets-control" style="margin:12px 0;padding:12px;border-radius:8px;border:1px solid var(--border-color, #eee);background:var(--panel-bg, #fff);box-shadow:var(--panel-shadow, none);"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><label style="min-width:86px;color:var(--muted,#666);">API 预设：</label><select id="api-preset-select" style="flex:1;padding:8px;border-radius:6px;border:1px solid #ddd;"><option value="">— 选择 API 预设 —</option></select><button id="api-apply-preset" class="btn btn-primary" style="margin-left:8px;padding:6px 10px;">应用</button></div><div style="display:flex;gap:8px;align-items:center;"><button id="api-save-preset" class="btn" style="padding:6px 10px;">另存为</button><button id="api-manage-presets" class="btn" style="padding:6px 10px;">管理</button><div style="flex:1"></div><button id="api-import-presets" class="btn" style="padding:6px 10px;">导入</button><button id="api-export-presets" class="btn" style="padding:6px 10px;">导出</button></div></div><div id="api-presets-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:9999;align-items:center;justify-content:center;"><div style="width:640px;max-width:94%;background:var(--panel-bg,#fff);padding:16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);"><h3 style="margin:0 0 12px 0;">API 预设管理</h3><div id="api-presets-list" style="max-height:360px;overflow:auto;border:1px solid #f0f0f0;padding:8px;border-radius:6px;"></div><div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;"><button id="api-close-modal" class="btn btn-primary">关闭</button></div></div></div></div></main>`;
@@ -7250,82 +7243,28 @@ border-top: none;
                     systemPromptContent += `\n\n【我的角色设定】\n我的名字是${character.myName}，人设是：${userPersona}。`;
                     // --- END NEW ---
 
-                    const { provider, streamEnabled } = db.apiSettings;
-                    const useStream = streamEnabled;
-
-                    let requestBody;
-                    const messages = [
-                        { role: 'system', content: systemPromptContent },
-                        { role: 'user', content: prompt }
-                    ];
-
-                    if (provider === 'gemini') {
-                        requestBody = {
-                            contents: messages.map(msg => ({ role: msg.role === 'system' ? 'user' : msg.role, parts: [{ text: msg.content }] })),
-                            generationConfig: { temperature: 0.8 }
-                        };
-                    } else {
-                        requestBody = {
-                            model: model,
-                            messages: messages,
-                            temperature: 0.8,
-                            stream: useStream
-                        };
-                    }
-
-                    const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:${useStream ? 'streamGenerateContent' : 'generateContent'}?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
-                    const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${key}`
-                    };
-
-                    const response = await fetch(endpoint, {
+                    const response = await fetch(`${url}/v1/chat/completions`, {
                         method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify(requestBody)
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${key}`
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [
+                                { role: 'system', content: systemPromptContent },
+                                { role: 'user', content: prompt }
+                            ],
+                            temperature: 0.8
+                        })
                     });
 
                     if (!response.ok) {
                         throw new Error('API请求失败');
                     }
 
-                    let reply = "";
-                    if (useStream) {
-                        const reader = response.body.getReader();
-                        const decoder = new TextDecoder();
-                        let accumulatedChunk = "";
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) break;
-                            accumulatedChunk += decoder.decode(value, { stream: true });
-                        }
-                        
-                        if (provider === 'gemini') {
-                            try {
-                                const parsedStream = JSON.parse(accumulatedChunk);
-                                reply = parsedStream.map(item => item.candidates?.[0]?.content?.parts?.[0]?.text || "").join('');
-                            } catch (e) { throw new Error("解析Gemini响应失败"); }
-                        } else { // OpenAI-like stream
-                            const parts = accumulatedChunk.split("\n\n");
-                            for (const part of parts) {
-                                if (part.startsWith("data: ")) {
-                                    const data = part.substring(6);
-                                    if (data.trim() !== "[DONE]") {
-                                        try {
-                                            reply += JSON.parse(data).choices[0].delta?.content || "";
-                                        } catch (e) { /* ignore */ }
-                                    }
-                                }
-                            }
-                        }
-                    } else { // Non-streaming
-                        const result = await response.json();
-                        if (provider === 'gemini') {
-                            reply = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                        } else {
-                            reply = result.choices[0].message.content;
-                        }
-                    }
+                    const result = await response.json();
+                    const reply = result.choices[0].message.content;
 
                     // NEW: Add user action and AI reply to session history
                     pomodoroSessionHistory.push({ type: 'user', content: promptType });
@@ -8345,28 +8284,14 @@ border-top: none;
                     throw new Error("API设置不完整。");
                 }
 
-                let requestBody;
-                const messages = [{ role: 'system', content: 'You are a helpful assistant designed to output JSON.' }, { role: 'user', content: summaryPrompt }];
-
-                if (provider === 'gemini') {
-                    requestBody = {
-                        contents: messages.map(msg => ({ role: msg.role === 'system' ? 'user' : msg.role, parts: [{ text: msg.content }] })),
-                        generationConfig: {
-                            response_mime_type: "application/json",
-                            temperature: 0.7,
-                        }
-                    };
-                } else {
-                    requestBody = {
-                        model: model,
-                        messages: messages,
-                        temperature: 0.7,
-                        response_format: { type: "json_object" },
-                    };
-                }
-
-                const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:generateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
-                const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
+                const requestBody = {
+                    model: model,
+                    messages: [{ role: 'user', content: summaryPrompt }],
+                    temperature: 0.7,
+                    response_format: { type: "json_object" }, // Request JSON output
+                };
+                const endpoint = `${url}/v1/chat/completions`;
+                const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
 
                 const response = await fetch(endpoint, { method: 'POST', headers: headers, body: JSON.stringify(requestBody) });
                 if (!response.ok) {
@@ -8376,12 +8301,7 @@ border-top: none;
                 }
 
                 const result = await response.json();
-                let rawContent;
-                if (provider === 'gemini') {
-                    rawContent = result.candidates[0].content.parts[0].text;
-                } else {
-                    rawContent = result.choices[0].message.content;
-                }
+                const rawContent = result.choices[0].message.content;
                 const journalData = JSON.parse(rawContent);
 
                 // Create and save the new journal entry
@@ -8439,9 +8359,6 @@ border-top: none;
             });
 
             // New simplified settings functionality
-            const generateAllBtn = document.getElementById('generate-all-peek-btn');
-            generateAllBtn?.addEventListener('click', generateAllPeekContentInOneGo);
-
             peekSettingsBtn?.addEventListener('click', () => {
                 renderPeekSettings();
                 peekWallpaperModal.classList.add('visible');
@@ -12818,7 +12735,7 @@ return `${seconds}秒`;
                     // 修改：根据 streamEnabled 设置 stream 属性
                     requestBody = {model: model, messages: messages, stream: streamEnabled};
                 }
-                const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:${streamEnabled ? 'streamGenerateContent' : 'generateContent'}?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
+                const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:streamGenerateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
                 const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${key}`
@@ -15148,29 +15065,15 @@ ${context}
         }
 
 
-        const { provider } = db.apiSettings;
-        let requestBody;
-        const messages = [{ role: "user", content: systemPrompt }];
+        const requestBody = {
+            model: model,
+            messages: [{ role: "user", content: systemPrompt }],
+            temperature: 0.8,
+            response_format: { type: "json_object" },
+        };
 
-        if (provider === 'gemini') {
-            requestBody = {
-                contents: messages.map(msg => ({ role: msg.role, parts: [{ text: msg.content }] })),
-                generationConfig: {
-                    response_mime_type: "application/json",
-                    temperature: 0.8,
-                }
-            };
-        } else {
-            requestBody = {
-                model: model,
-                messages: messages,
-                temperature: 0.8,
-                response_format: { type: "json_object" },
-            };
-        }
-
-        const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:generateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
-        const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
+        const endpoint = `${url}/v1/chat/completions`;
+        const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
 
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -15185,12 +15088,7 @@ ${context}
         }
 
         const result = await response.json();
-        let contentStr;
-        if (provider === 'gemini') {
-            contentStr = result.candidates[0].content.parts[0].text;
-        } else {
-            contentStr = result.choices[0].message.content;
-        }
+        const contentStr = result.choices[0].message.content;
 
         const jsonData = JSON.parse(contentStr);
         if (jsonData && Array.isArray(jsonData.posts)) {
@@ -15441,133 +15339,6 @@ function renderForumPosts(posts) {
             return prompt;
         }
 
-        function generateAllPeekContentPrompt(char, mainChatContext) {
-            let prompt = `你正在模拟一个名为 ${char.realName} 的角色的手机内部信息。`;
-            prompt += `该角色的核心人设是：${char.persona}。\n`;
-
-            const associatedWorldBooks = (char.worldBookIds || []).map(id => db.worldBooks.find(wb => wb.id === id)).filter(Boolean);
-            if (associatedWorldBooks.length > 0) {
-                const worldBookContext = associatedWorldBooks.map(wb => `设定名: ${wb.name}\n内容: ${wb.content}`).join('\n\n');
-                prompt += `\n为了更好地理解背景，请参考以下世界观设定：\n---\n${worldBookContext}\n---\n`;
-            }
-            if (char.myPersona) {
-                prompt += `\n作为参考，我（用户）的人设是：${char.myPersona}\n`;
-            }
-
-            prompt += `最近，我（称呼为 ${char.myName}）和 ${char.realName} 的对话如下（这是你们关系和当前状态的核心参考）：\n---\n${mainChatContext}\n---\n`;
-            prompt += `现在，请你一次性生成Ta手机上所有应用的内容，包括：消息、备忘录、购物车、文件传输助手、浏览器历史、草稿箱、相册、步数、和微博(unlock)。\n`;
-            prompt += `你的输出必须是一个单一的JSON对象，键是应用的英文ID（例如 "messages", "album"），值是对应应用的数据结构。请严格遵循以下JSON结构，不要有任何额外的解释或标记：\n`;
-            prompt += `
-            {
-              "messages": { "conversations": [ { "partnerName": "...", "history": [ { "sender": "char", "content": "..." } ] } ] },
-              "memos": { "memos": [ { "id": "memo_1", "title": "...", "content": "..." } ] },
-              "cart": { "items": [ { "id": "cart_1", "title": "...", "spec": "...", "price": "..." } ] },
-              "transfer": { "entries": [ "...", "..." ] },
-              "browser": { "history": [ { "title": "...", "url": "...", "annotation": "..." } ] },
-              "drafts": { "draft": { "to": "${char.myName}", "content": "..." } },
-              "album": { "photos": [ { "type": "photo", "imageDescription": "...", "description": "..." } ] },
-              "steps": { "currentSteps": 1234, "trajectory": [ "...", "..." ], "annotation": "..." },
-              "unlock": { "nickname": "...", "handle": "...", "bio": "...", "posts": [ { "timestamp": "...", "content": "..." } ] }
-            }
-            `;
-            prompt += `所有生成的内容都必须与角色的人设、我们的聊天记录以及相关的世界观设定高度一致，以确保沉浸感。`;
-            return prompt;
-        }
-
-        async function generateAllPeekContentInOneGo() {
-            if (generatingPeekApps.size > 0) {
-                showToast('正在生成内容，请稍候...');
-                return;
-            }
-
-            const char = db.characters.find(c => c.id === currentChatId);
-            if (!char) return showToast('无法找到当前角色');
-
-            const { url, key, model, provider } = db.apiSettings;
-            if (!url || !key || !model) {
-                showToast('请先在“api”应用中完成设置！');
-                return switchScreen('api-settings-screen');
-            }
-
-            const allAppsLock = 'all_apps';
-            generatingPeekApps.add(allAppsLock);
-            showToast('正在一键生成所有应用内容，请耐心等待...');
-            
-            const genAllBtn = document.getElementById('generate-all-peek-btn');
-            if (genAllBtn) genAllBtn.disabled = true;
-
-            try {
-                const mainChatContext = char.history.slice(-10).map(m => m.content).join('\n');
-                const systemPrompt = generateAllPeekContentPrompt(char, mainChatContext);
-
-                const messages = [{ role: 'system', content: 'You are a helpful assistant designed to output JSON.' }, { role: 'user', content: systemPrompt }];
-                let requestBody;
-
-                if (provider === 'gemini') {
-                    requestBody = {
-                        contents: messages.map(msg => ({ role: msg.role === 'system' ? 'user' : msg.role, parts: [{ text: msg.content }] })),
-                        generationConfig: {
-                            response_mime_type: "application/json",
-                            temperature: 0.8,
-                            top_p: 0.9,
-                        }
-                    };
-                } else {
-                    requestBody = {
-                        model: model,
-                        messages: messages,
-                        temperature: 0.8,
-                        top_p: 0.9,
-                        response_format: { type: "json_object" },
-                    };
-                }
-
-                const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:generateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
-                const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
-
-                const response = await fetch(endpoint, { method: 'POST', headers: headers, body: JSON.stringify(requestBody) });
-                if (!response.ok) {
-                    const error = new Error(`API Error: ${response.status} ${await response.text()}`);
-                    error.response = response;
-                    throw error;
-                }
-                
-                const result = await response.json();
-                let contentStr;
-                if (provider === 'gemini') {
-                    contentStr = result.candidates[0].content.parts[0].text;
-                } else {
-                    contentStr = result.choices[0].message.content;
-                }
-                
-                const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) throw new Error("AI响应中未找到有效的JSON对象。");
-                
-                const allGeneratedData = JSON.parse(jsonMatch[0]);
-
-                let validApps = 0;
-                for (const appType in allGeneratedData) {
-                    if (peekScreenApps.hasOwnProperty(appType)) {
-                        peekContentCache[appType] = allGeneratedData[appType];
-                        validApps++;
-                    }
-                }
-
-                if (validApps > 0) {
-                    showToast(`成功生成 ${validApps} 个应用的内容！现在可以点击图标查看了。`);
-                } else {
-                    throw new Error("AI返回的数据中没有包含任何有效的应用内容。");
-                }
-
-            } catch (error) {
-                showApiError(error);
-                peekContentCache = {};
-            } finally {
-                generatingPeekApps.delete(allAppsLock);
-                if (genAllBtn) genAllBtn.disabled = false;
-            }
-        }
-
         async function generateAndRenderPeekContent(appType, options = {}) {
             const { forceRefresh = false } = options;
 
@@ -15685,31 +15456,15 @@ function renderForumPosts(posts) {
                 const mainChatContext = char.history.slice(-10).map(m => m.content).join('\n');
                 const systemPrompt = generatePeekContentPrompt(char, appType, mainChatContext);
                 
-                const { provider } = db.apiSettings;
-                let requestBody;
-                const messages = [{ role: 'system', content: 'You are a helpful assistant designed to output JSON.' }, { role: 'user', content: systemPrompt }];
+                const requestBody = {
+                    model: model,
+                    messages: [{ role: 'user', content: systemPrompt }],
+                    temperature: 0.8,
+                    top_p: 0.9,
+                };
 
-                if (provider === 'gemini') {
-                    requestBody = {
-                        contents: messages.map(msg => ({ role: msg.role === 'system' ? 'user' : msg.role, parts: [{ text: msg.content }] })),
-                        generationConfig: {
-                            response_mime_type: "application/json",
-                            temperature: 0.8,
-                            top_p: 0.9,
-                        }
-                    };
-                } else {
-                    requestBody = {
-                        model: model,
-                        messages: messages,
-                        temperature: 0.8,
-                        top_p: 0.9,
-                        response_format: { type: "json_object" },
-                    };
-                }
-
-                const endpoint = (provider === 'gemini') ? `${url}/v1beta/models/${model}:generateContent?key=${getRandomValue(key)}` : `${url}/v1/chat/completions`;
-                const headers = (provider === 'gemini') ? {'Content-Type': 'application/json'} : { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
+                const endpoint = `${url}/v1/chat/completions`;
+                const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` };
 
                 const response = await fetch(endpoint, { method: 'POST', headers: headers, body: JSON.stringify(requestBody) });
                 if (!response.ok) {
@@ -15719,12 +15474,7 @@ function renderForumPosts(posts) {
                 }
                 
                 const result = await response.json();
-                let contentStr;
-                if (provider === 'gemini') {
-                    contentStr = result.candidates[0].content.parts[0].text;
-                } else {
-                    contentStr = result.choices[0].message.content;
-                }
+                const contentStr = result.choices[0].message.content;
                 
                 const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
                 if (!jsonMatch) throw new Error("AI响应中未找到有效的JSON对象。");
