@@ -6706,10 +6706,41 @@ border-top: none;
                     styleElement.id = styleId;
                     document.head.appendChild(styleElement);
                 }
-                const scopedCss = `#chat-room-screen.chat-active-${chatId} { ${css} }`;
+
+                const scope = `#chat-room-screen.chat-active-${chatId}`;
+
+                // 这是一个更稳健的方法来为CSS字符串中的所有选择器添加作用域前缀。
+                // 它能处理注释和多个选择器（例如 h1, h2）。
+                const scopedCss = css
+                    .replace(/\/\*[\s\S]*?\*\//g, '') // 1. 移除所有CSS注释
+                    .split('}') // 2. 按 '}' 将CSS分割成多条规则
+                    .filter(rule => rule.trim()) // 3. 移除分割后产生的空字符串
+                    .map(rule => {
+                        const braceIndex = rule.indexOf('{');
+                        if (braceIndex === -1) return null; // 如果找不到 '{', 说明不是一条有效的规则
+
+                        const selectors = rule.substring(0, braceIndex);
+                        const properties = rule.substring(braceIndex); // 例如 "{ color: red; "
+
+                        // 4. 为逗号分隔的每个选择器都加上作用域前缀
+                        const scopedSelectors = selectors
+                            .split(',')
+                            .map(s => s.trim())
+                            .filter(s => s)
+                            .map(s => `${scope} ${s}`) // 核心：添加前缀
+                            .join(', ');
+
+                        return `${scopedSelectors} ${properties}}`;
+                    })
+                    .filter(Boolean) // 5. 再次过滤掉无效的规则
+                    .join('\n'); // 6. 将所有规则重新组合成一个完整的CSS字符串
+
                 styleElement.innerHTML = scopedCss;
+
             } else {
-                if (styleElement) styleElement.remove();
+                if (styleElement) {
+                    styleElement.remove();
+                }
             }
         }
 
