@@ -6710,23 +6710,24 @@ border-top: none;
                 const scope = `#chat-room-screen.chat-active-${chatId}`;
                 let finalCss = '';
 
-                // 1. Handle :root variables by scoping them to the chat container
+                // 1. Handle :root variables by applying them directly to the scoped element
                 const rootRegex = /:root\s*\{([\s\S]*?)\}/;
                 const rootMatch = css.match(rootRegex);
                 if (rootMatch && rootMatch[1]) {
                     const rootVars = rootMatch[1].trim();
                     if (rootVars) {
+                        // This creates a rule that applies the CSS variables to the specific chat screen
                         finalCss += `${scope} { ${rootVars} }\n`;
                     }
                 }
 
-                // 2. Remove the original :root block and any @-rules that don't get processed well.
+                // 2. Remove the original :root block and any @-rules that are problematic
                 let remainingCss = css
                     .replace(rootRegex, '')
                     .replace(/@keyframes[\s\S]*?(\}\s*\}|\})/g, '') // Remove @keyframes
                     .replace(/@font-face[\s\S]*?\}/g, ''); // Remove @font-face
 
-                // 3. Process remaining rules. This regex is non-greedy and finds selector blocks and their content.
+                // 3. Process all other rules with a more intelligent scoping logic
                 const ruleRegex = /([^{}]+?)\s*\{([^{}]+?)\}/g;
                 let match;
                 while ((match = ruleRegex.exec(remainingCss)) !== null) {
@@ -6737,8 +6738,17 @@ border-top: none;
                         const scopedSelectors = selectors
                             .split(',')
                             .map(s => s.trim())
-                            .filter(s => s && !s.startsWith('@')) // Filter out any remaining @-rules
-                            .map(s => `${scope} ${s}`)
+                            .filter(s => s && !s.startsWith('@'))
+                            .map(s => {
+                                // NEW INTELLIGENT SCOPING:
+                                // If the selector already contains the base screen ID,
+                                // just add the active class to it. Otherwise, prepend the full scope.
+                                if (s.includes('#chat-room-screen')) {
+                                    return s.replace('#chat-room-screen', scope);
+                                } else {
+                                    return `${scope} ${s}`;
+                                }
+                            })
                             .join(', ');
                         
                         if (scopedSelectors) {
