@@ -61,7 +61,8 @@
         .phone-screen {
             width: 100%;
             max-width: 420px;
-            height: 100%;
+            height: 100dvh; /* 使用动态视口高度 */
+            height: 100vh;  /* 为旧版浏览器提供后备 */
             max-height: 850px;
             background-color: var(--white-color);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -15922,4 +15923,5 @@ function renderForumPosts(posts) {
 </body>
 
 </html>
+
 
