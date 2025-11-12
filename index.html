@@ -6708,34 +6708,46 @@ border-top: none;
                 }
 
                 const scope = `#chat-room-screen.chat-active-${chatId}`;
+                let finalCss = '';
 
-                // 这是一个更稳健的方法来为CSS字符串中的所有选择器添加作用域前缀。
-                // 它能处理注释和多个选择器（例如 h1, h2）。
-                const scopedCss = css
-                    .replace(/\/\*[\s\S]*?\*\//g, '') // 1. 移除所有CSS注释
-                    .split('}') // 2. 按 '}' 将CSS分割成多条规则
-                    .filter(rule => rule.trim()) // 3. 移除分割后产生的空字符串
-                    .map(rule => {
-                        const braceIndex = rule.indexOf('{');
-                        if (braceIndex === -1) return null; // 如果找不到 '{', 说明不是一条有效的规则
+                // 1. Handle :root variables by scoping them to the chat container
+                const rootRegex = /:root\s*\{([\s\S]*?)\}/;
+                const rootMatch = css.match(rootRegex);
+                if (rootMatch && rootMatch[1]) {
+                    const rootVars = rootMatch[1].trim();
+                    if (rootVars) {
+                        finalCss += `${scope} { ${rootVars} }\n`;
+                    }
+                }
 
-                        const selectors = rule.substring(0, braceIndex);
-                        const properties = rule.substring(braceIndex); // 例如 "{ color: red; "
+                // 2. Remove the original :root block and any @-rules that don't get processed well.
+                let remainingCss = css
+                    .replace(rootRegex, '')
+                    .replace(/@keyframes[\s\S]*?(\}\s*\}|\})/g, '') // Remove @keyframes
+                    .replace(/@font-face[\s\S]*?\}/g, ''); // Remove @font-face
 
-                        // 4. 为逗号分隔的每个选择器都加上作用域前缀
+                // 3. Process remaining rules. This regex is non-greedy and finds selector blocks and their content.
+                const ruleRegex = /([^{}]+?)\s*\{([^{}]+?)\}/g;
+                let match;
+                while ((match = ruleRegex.exec(remainingCss)) !== null) {
+                    const selectors = match[1].trim();
+                    const properties = match[2].trim();
+
+                    if (selectors && properties) {
                         const scopedSelectors = selectors
                             .split(',')
                             .map(s => s.trim())
-                            .filter(s => s)
-                            .map(s => `${scope} ${s}`) // 核心：添加前缀
+                            .filter(s => s && !s.startsWith('@')) // Filter out any remaining @-rules
+                            .map(s => `${scope} ${s}`)
                             .join(', ');
+                        
+                        if (scopedSelectors) {
+                           finalCss += `${scopedSelectors} { ${properties} }\n`;
+                        }
+                    }
+                }
 
-                        return `${scopedSelectors} ${properties}}`;
-                    })
-                    .filter(Boolean) // 5. 再次过滤掉无效的规则
-                    .join('\n'); // 6. 将所有规则重新组合成一个完整的CSS字符串
-
-                styleElement.innerHTML = scopedCss;
+                styleElement.innerHTML = finalCss;
 
             } else {
                 if (styleElement) {
